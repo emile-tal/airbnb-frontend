@@ -68,9 +68,20 @@ export default function Home() {
                 <Link href={`/listing/${listing.id}`} key={listing.id}>
                   <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div className="relative h-48 w-full">
-                      <div className="bg-gray-200 h-full w-full flex items-center justify-center">
-                        <span className="text-gray-500">Listing Image</span>
-                      </div>
+                      {listing.imageSrc ? (
+                        <Image
+                          src={listing.imageSrc}
+                          alt={listing.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          style={{ objectFit: 'cover' }}
+                          className="bg-gray-100"
+                        />
+                      ) : (
+                        <div className="bg-gray-200 h-full w-full flex items-center justify-center">
+                          <span className="text-gray-500">No Image</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="p-4">

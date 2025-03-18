@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import ImageUpload from '../components/ImageUpload';
 import Link from 'next/link';
 import { createListing } from '../lib/api';
 import { useRouter } from 'next/navigation';
@@ -141,23 +142,7 @@ export default function AddListing() {
                     {/* Image */}
                     <section className="bg-white rounded-lg p-6 shadow-sm border">
                         <h2 className="text-xl font-semibold mb-4">Listing Image</h2>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label htmlFor="imageSrc" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Image URL
-                                </label>
-                                <input
-                                    id="imageSrc"
-                                    type="text"
-                                    value={imageSrc}
-                                    onChange={(e) => setImageSrc(e.target.value)}
-                                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-[#FF385C] focus:border-[#FF385C]"
-                                    placeholder="Enter an image URL"
-                                    required
-                                />
-                            </div>
-                        </div>
+                        <ImageUpload value={imageSrc} onChange={setImageSrc} />
                     </section>
 
                     {/* Category and counts */}

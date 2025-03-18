@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { Listing } from '../../types';
 import { getListing } from '../../lib/api';
@@ -69,13 +70,21 @@ export default function ListingDetail() {
                     <div className="lg:col-span-2">
                         {/* Image */}
                         <section className="mb-8">
-                            <div className="bg-gray-200 rounded-lg h-[300px] md:h-[400px] flex items-center justify-center mb-2">
+                            <div className="rounded-lg h-[300px] md:h-[400px] relative overflow-hidden">
                                 {listing.imageSrc ? (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <span className="text-gray-500 text-lg">Listing Image</span>
-                                    </div>
+                                    <Image
+                                        src={listing.imageSrc}
+                                        alt={listing.title}
+                                        fill
+                                        priority
+                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw"
+                                        style={{ objectFit: 'cover' }}
+                                        className="rounded-lg"
+                                    />
                                 ) : (
-                                    <span className="text-gray-500">No image available</span>
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                        <span className="text-gray-500">No image available</span>
+                                    </div>
                                 )}
                             </div>
                         </section>
