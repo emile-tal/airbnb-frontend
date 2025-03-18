@@ -4,30 +4,35 @@ import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { Property } from './types';
-import { mockApi } from './lib/api';
+import { Listing } from './types';
+import { getListings } from './lib/api';
 
 export default function Home() {
-  const [properties, setProperties] = useState<Property[]>([]);
+  const [listings, setListings] = useState<Listing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
-    async function fetchProperties() {
+    setIsMounted(true);
+    async function fetchListings() {
       try {
-        // In a real app with backend, we'd use the real API function instead of mockApi
-        const data = await mockApi.getProperties();
-        setProperties(data);
+        const data = await getListings();
+        setListings(data);
       } catch (err) {
-        console.error('Failed to fetch properties:', err);
-        setError('Failed to load properties. Please try again later.');
+        console.error('Failed to fetch listings:', err);
+        setError('Failed to load listings. Please try again later.');
       } finally {
         setLoading(false);
       }
     }
 
-    fetchProperties();
+    fetchListings();
   }, []);
+
+  if (!isMounted) {
+    return null; // Return nothing during server-side rendering
+  }
 
   return (
     <div className="min-h-screen p-4 md:p-8">
@@ -37,55 +42,54 @@ export default function Home() {
 
         <div className="mt-6 flex justify-center">
           <Link
-            href="/add-property"
+            href="/add-listing"
             className="bg-[#FF385C] hover:bg-[#E61E4D] text-white px-6 py-2 rounded-full font-medium"
           >
-            List Your Property
+            List Your Home
           </Link>
         </div>
       </header>
 
       <main>
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Featured Properties</h2>
+          <h2 className="text-2xl font-semibold mb-4">Featured Listings</h2>
 
           {loading ? (
             <div className="flex justify-center py-10">
-              <div className="animate-pulse">Loading properties...</div>
+              <div className="animate-pulse">Loading listings...</div>
             </div>
           ) : error ? (
             <div className="bg-red-50 p-4 rounded-lg text-red-500 text-center">
               {error}
             </div>
-          ) : properties.length > 0 ? (
+          ) : listings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {properties.map((property) => (
-                <Link href={`/property/${property.id}`} key={property.id}>
+              {listings.map((listing) => (
+                <Link href={`/listing/${listing.id}`} key={listing.id}>
                   <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div className="relative h-48 w-full">
                       <div className="bg-gray-200 h-full w-full flex items-center justify-center">
-                        <span className="text-gray-500">Property Image</span>
+                        <span className="text-gray-500">Listing Image</span>
                       </div>
                     </div>
 
                     <div className="p-4">
-                      <h3 className="font-semibold text-lg">{property.title}</h3>
-                      <p className="text-gray-600">{property.location}</p>
-                      <p className="font-medium mt-2">${property.price} / night</p>
+                      <h3 className="font-semibold text-lg">{listing.title}</h3>
+                      <p className="text-gray-600">{listing.locationValue}</p>
+                      <p className="font-medium mt-2">${listing.price} / night</p>
 
                       <div className="mt-3">
-                        <h4 className="text-sm font-medium">Amenities:</h4>
+                        <h4 className="text-sm font-medium">Features:</h4>
                         <div className="flex flex-wrap gap-1 mt-1">
-                          {property.amenities.slice(0, 3).map((amenity, i) => (
-                            <span key={i} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                              {amenity}
-                            </span>
-                          ))}
-                          {property.amenities.length > 3 && (
-                            <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                              +{property.amenities.length - 3} more
-                            </span>
-                          )}
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {listing.roomCount} Rooms
+                          </span>
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {listing.bathroomCount} Bathrooms
+                          </span>
+                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                            {listing.category}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -95,12 +99,12 @@ export default function Home() {
             </div>
           ) : (
             <div className="text-center py-10 bg-gray-50 rounded-lg">
-              <p>No properties found. Be the first to list your property!</p>
+              <p>No listings found. Be the first to list your home!</p>
               <Link
-                href="/add-property"
+                href="/add-listing"
                 className="inline-block mt-4 bg-[#FF385C] hover:bg-[#E61E4D] text-white px-6 py-2 rounded-full font-medium"
               >
-                Add Your Property
+                Add Your Listing
               </Link>
             </div>
           )}
@@ -111,7 +115,7 @@ export default function Home() {
             <h2 className="text-2xl font-semibold mb-2">Have a place to rent?</h2>
             <p className="text-gray-600 mb-4">Share your space and start earning</p>
             <Link
-              href="/add-property"
+              href="/add-listing"
               className="inline-block bg-[#FF385C] hover:bg-[#E61E4D] text-white px-6 py-2 rounded-full font-medium"
             >
               Become a Host

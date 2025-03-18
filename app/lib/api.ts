@@ -1,6 +1,6 @@
-import { Booking, Property, User } from '../types';
+import { Favorite, Listing, Reservation, User } from '../types';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { prisma } from '../../lib/prisma';
 
 export class ApiError extends Error {
     status: number;
@@ -12,163 +12,212 @@ export class ApiError extends Error {
     }
 }
 
-async function fetchApi<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<T> {
-    const url = `${API_URL}${endpoint}`;
-
-    const response = await fetch(url, {
-        ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            ...options.headers,
-        },
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-        throw new ApiError(data.message || 'An error occurred', response.status);
+// Listings (formerly Properties)
+export async function getListings(): Promise<Listing[]> {
+    try {
+        const listings = await prisma.listing.findMany();
+        return listings;
+    } catch (error) {
+        console.error("Error getting listings:", error);
+        throw new ApiError('Failed to retrieve listings', 500);
     }
-
-    return data;
 }
 
-// Properties
-export async function getProperties(): Promise<Property[]> {
-    return fetchApi<Property[]>('/properties');
-}
+export async function getListing(id: string): Promise<Listing> {
+    try {
+        const listing = await prisma.listing.findUnique({
+            where: { id }
+        });
 
-export async function getProperty(id: string): Promise<Property> {
-    return fetchApi<Property>(`/properties/${id}`);
-}
+        if (!listing) {
+            throw new ApiError('Listing not found', 404);
+        }
 
-export async function createProperty(property: Omit<Property, 'id'>): Promise<Property> {
-    return fetchApi<Property>('/properties', {
-        method: 'POST',
-        body: JSON.stringify(property),
-    });
-}
-
-export async function uploadPropertyImage(
-    propertyId: string,
-    file: File
-): Promise<{ url: string }> {
-    const formData = new FormData();
-    formData.append('image', file);
-
-    const response = await fetch(`${API_URL}/properties/${propertyId}/images`, {
-        method: 'POST',
-        body: formData,
-    });
-
-    if (!response.ok) {
-        const error = await response.json();
-        throw new ApiError(error.message || 'Failed to upload image', response.status);
+        return listing;
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        console.error("Error getting listing:", error);
+        throw new ApiError('Failed to retrieve listing', 500);
     }
-
-    return response.json();
 }
 
-// Bookings
-export async function createBooking(booking: Omit<Booking, 'id' | 'created_at' | 'status'>): Promise<Booking> {
-    return fetchApi<Booking>('/bookings', {
-        method: 'POST',
-        body: JSON.stringify(booking),
-    });
+export async function createListing(listing: Omit<Listing, 'id' | 'createdAt'>): Promise<Listing> {
+    try {
+        const newListing = await prisma.listing.create({
+            data: {
+                ...listing
+            }
+        });
+
+        return newListing;
+    } catch (error) {
+        console.error("Error creating listing:", error);
+        throw new ApiError('Failed to create listing', 500);
+    }
 }
 
-export async function getUserBookings(userId: string): Promise<Booking[]> {
-    return fetchApi<Booking[]>(`/users/${userId}/bookings`);
+export async function updateListing(id: string, data: Partial<Omit<Listing, 'id' | 'createdAt'>>): Promise<Listing> {
+    try {
+        const updatedListing = await prisma.listing.update({
+            where: { id },
+            data
+        });
+
+        return updatedListing;
+    } catch (error) {
+        console.error("Error updating listing:", error);
+        throw new ApiError('Failed to update listing', 500);
+    }
+}
+
+export async function deleteListing(id: string): Promise<void> {
+    try {
+        await prisma.listing.delete({
+            where: { id }
+        });
+    } catch (error) {
+        console.error("Error deleting listing:", error);
+        throw new ApiError('Failed to delete listing', 500);
+    }
+}
+
+// Reservations (formerly Bookings)
+export async function createReservation(
+    reservation: Omit<Reservation, 'id' | 'createdAt'>
+): Promise<Reservation> {
+    try {
+        const newReservation = await prisma.reservation.create({
+            data: {
+                ...reservation
+            }
+        });
+
+        return newReservation;
+    } catch (error) {
+        console.error("Error creating reservation:", error);
+        throw new ApiError('Failed to create reservation', 500);
+    }
+}
+
+export async function getUserReservations(userId: string): Promise<Reservation[]> {
+    try {
+        const reservations = await prisma.reservation.findMany({
+            where: { userId }
+        });
+
+        return reservations;
+    } catch (error) {
+        console.error("Error getting user reservations:", error);
+        throw new ApiError('Failed to retrieve reservations', 500);
+    }
+}
+
+export async function getListingReservations(listingId: string): Promise<Reservation[]> {
+    try {
+        const reservations = await prisma.reservation.findMany({
+            where: { listingId }
+        });
+
+        return reservations;
+    } catch (error) {
+        console.error("Error getting listing reservations:", error);
+        throw new ApiError('Failed to retrieve reservations', 500);
+    }
 }
 
 // User
-export async function getUserProfile(): Promise<User> {
-    return fetchApi<User>('/users/profile');
-}
+export async function getUserById(id: string): Promise<User> {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id }
+        });
 
-export async function updateUserProfile(user: Partial<User>): Promise<User> {
-    return fetchApi<User>('/users/profile', {
-        method: 'PUT',
-        body: JSON.stringify(user),
-    });
-}
-
-// Mock functions for development
-export const mockApi = {
-    getProperties: async (): Promise<Property[]> => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 800));
-
-        return [
-            {
-                id: '1',
-                title: 'Cozy Beach House',
-                location: 'Malibu, CA',
-                price: 250,
-                images: ['/placeholder-house.jpg'],
-                amenities: ['Wifi', 'Kitchen', 'Beachfront', 'Parking'],
-                availability: ['May 1-15, 2023', 'June 3-28, 2023'],
-                description: 'Beautiful beachfront property with stunning ocean views. Perfect for a relaxing getaway with family or friends. Easy access to local attractions and restaurants.'
-            },
-            {
-                id: '2',
-                title: 'Mountain Retreat',
-                location: 'Aspen, CO',
-                price: 350,
-                images: ['/placeholder-cabin.jpg'],
-                amenities: ['Fireplace', 'Hot tub', 'Mountain view', 'Hiking trails'],
-                availability: ['April 10-30, 2023', 'July 5-25, 2023'],
-                description: 'Escape to this serene mountain cabin surrounded by nature. Enjoy hiking, skiing, and the peaceful mountain atmosphere. Perfect for nature lovers and outdoor enthusiasts.'
-            }
-        ];
-    },
-
-    getProperty: async (id: string): Promise<Property> => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        const properties = {
-            '1': {
-                id: '1',
-                title: 'Cozy Beach House',
-                location: 'Malibu, CA',
-                price: 250,
-                images: ['/placeholder-house.jpg'],
-                amenities: ['Wifi', 'Kitchen', 'Beachfront', 'Parking'],
-                availability: ['May 1-15, 2023', 'June 3-28, 2023'],
-                description: 'Beautiful beachfront property with stunning ocean views. Perfect for a relaxing getaway with family or friends. Easy access to local attractions and restaurants.'
-            },
-            '2': {
-                id: '2',
-                title: 'Mountain Retreat',
-                location: 'Aspen, CO',
-                price: 350,
-                images: ['/placeholder-cabin.jpg'],
-                amenities: ['Fireplace', 'Hot tub', 'Mountain view', 'Hiking trails'],
-                availability: ['April 10-30, 2023', 'July 5-25, 2023'],
-                description: 'Escape to this serene mountain cabin surrounded by nature. Enjoy hiking, skiing, and the peaceful mountain atmosphere. Perfect for nature lovers and outdoor enthusiasts.'
-            }
-        };
-
-        const property = properties[id as keyof typeof properties];
-
-        if (!property) {
-            throw new ApiError('Property not found', 404);
+        if (!user) {
+            throw new ApiError('User not found', 404);
         }
 
-        return property;
-    },
-
-    createProperty: async (property: Omit<Property, 'id'>): Promise<Property> => {
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-
-        return {
-            ...property,
-            id: Math.random().toString(36).substring(2, 9),
-            created_at: new Date().toISOString()
-        };
+        return user;
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        console.error("Error getting user:", error);
+        throw new ApiError('Failed to retrieve user', 500);
     }
-}; 
+}
+
+export async function getUserByEmail(email: string): Promise<User> {
+    try {
+        const user = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (!user) {
+            throw new ApiError('User not found', 404);
+        }
+
+        return user;
+    } catch (error) {
+        if (error instanceof ApiError) throw error;
+        console.error("Error getting user by email:", error);
+        throw new ApiError('Failed to retrieve user', 500);
+    }
+}
+
+export async function updateUser(id: string, data: Partial<User>): Promise<User> {
+    try {
+        const updatedUser = await prisma.user.update({
+            where: { id },
+            data
+        });
+
+        return updatedUser;
+    } catch (error) {
+        console.error("Error updating user:", error);
+        throw new ApiError('Failed to update user', 500);
+    }
+}
+
+// Favorites
+export async function addFavorite(userId: string, listingId: string): Promise<Favorite> {
+    try {
+        const favorite = await prisma.favorite.create({
+            data: {
+                userId,
+                listingId
+            }
+        });
+
+        return favorite;
+    } catch (error) {
+        console.error("Error adding favorite:", error);
+        throw new ApiError('Failed to add favorite', 500);
+    }
+}
+
+export async function removeFavorite(userId: string, listingId: string): Promise<void> {
+    try {
+        await prisma.favorite.deleteMany({
+            where: {
+                userId,
+                listingId
+            }
+        });
+    } catch (error) {
+        console.error("Error removing favorite:", error);
+        throw new ApiError('Failed to remove favorite', 500);
+    }
+}
+
+export async function getUserFavorites(userId: string): Promise<Favorite[]> {
+    try {
+        const favorites = await prisma.favorite.findMany({
+            where: { userId }
+        });
+
+        return favorites;
+    } catch (error) {
+        console.error("Error getting user favorites:", error);
+        throw new ApiError('Failed to retrieve favorites', 500);
+    }
+}
+
+// All mock API functions have been replaced with actual Prisma implementations 
