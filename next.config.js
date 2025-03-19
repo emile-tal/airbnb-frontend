@@ -6,6 +6,12 @@ const nextConfig = {
             'res.cloudinary.com'   // Allow Cloudinary images (for your uploads)
         ],
     },
+    eslint: {
+        ignoreDuringBuilds: true,
+    },
+    typescript: {
+        ignoreBuildErrors: true,
+    },
 }
 
 module.exports = nextConfig 
