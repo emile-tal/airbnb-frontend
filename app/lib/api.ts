@@ -45,7 +45,7 @@ export async function getListings(): Promise<Listing[]> {
                     const errorBody = await response.json();
                     console.error('Client API: Error details:', errorBody);
                     throw new ApiError(errorBody.message || 'Failed to retrieve listings', response.status);
-                } catch (jsonError) {
+                } catch (_) {
                     console.error('Client API: Could not parse error response body');
                     throw new ApiError('Failed to retrieve listings', response.status);
                 }

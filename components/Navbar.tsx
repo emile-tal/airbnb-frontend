@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 
 export default function Navbar() {
     const { data: session } = useSession();
-    const router = useRouter();
+    const _router = useRouter();
     const [hasListings, setHasListings] = useState(false);
     const [isCheckingListings, setIsCheckingListings] = useState(false);
 

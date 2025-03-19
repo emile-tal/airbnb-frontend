@@ -1,9 +1,10 @@
 'use client';
 
+import { Listing, Reservation } from '@/app/types';
 import { useEffect, useState } from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
-import { Listing, Reservation } from '@/app/types';
 import { getUserListings } from '@/app/lib/api';
 
 interface ErrorDisplayProps {
@@ -109,7 +110,7 @@ export default function DashboardContent() {
                 <h2 className="text-xl font-semibold mb-4">Your Listings</h2>
                 {!listings || listings.length === 0 ? (
                     <div className="bg-gray-50 p-6 rounded-lg text-center">
-                        <p className="text-gray-600 mb-4">You don't have any listings yet.</p>
+                        <p className="text-gray-600 mb-4">You don&apos;t have any listings yet.</p>
                         <Link
                             href="/add-listing"
                             className="px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600 transition-colors"
@@ -175,7 +176,7 @@ export default function DashboardContent() {
                 <h2 className="text-xl font-semibold mb-4">Reservations for Your Properties</h2>
                 {(!reservations || reservations.length === 0) ? (
                     <div className="bg-gray-50 p-6 rounded-lg">
-                        <p className="text-gray-600">You don't have any reservations yet.</p>
+                        <p className="text-gray-600">You don&apos;t have any reservations yet.</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -220,8 +221,8 @@ export default function DashboardContent() {
                                             </td>
                                             <td className="border p-2">
                                                 <span className={`px-2 py-1 rounded-full text-xs ${status === "Completed" ? "bg-gray-100 text-gray-800" :
-                                                        status === "Active" ? "bg-green-100 text-green-800" :
-                                                            "bg-blue-100 text-blue-800"
+                                                    status === "Active" ? "bg-green-100 text-green-800" :
+                                                        "bg-blue-100 text-blue-800"
                                                     }`}>
                                                     {status}
                                                 </span>

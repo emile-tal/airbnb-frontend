@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../../../lib/prisma';
 
 export async function GET(request: Request) {
@@ -7,7 +8,7 @@ export async function GET(request: Request) {
         const userId = searchParams.get('userId');
         const listingId = searchParams.get('listingId');
 
-        const whereClause: any = {};
+        const whereClause: Prisma.ReservationWhereInput = {};
 
         if (userId) {
             whereClause.userId = userId;

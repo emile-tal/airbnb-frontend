@@ -1,12 +1,11 @@
 import { checkDatabaseConnection, prisma } from '../../../lib/prisma';
 
-import { Listing } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { authOptions } from '../auth/[...nextauth]/route';
 import { getServerSession } from 'next-auth';
 
 // Simple check to demonstrate the API is reachable
-export async function GET(request: Request) {
+export async function GET(_request: Request) {
     try {
         console.log('API Route: GET /api/listings - Starting request');
 

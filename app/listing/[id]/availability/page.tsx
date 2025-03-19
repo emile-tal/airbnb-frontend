@@ -20,7 +20,7 @@ export default function ManageAvailability() {
 
     // This is a simplified version of availability management
     // A complete implementation would include a date picker and more complex availability rules
-    const [blockedDates, setBlockedDates] = useState<Date[]>([]);
+    const [_blockedDates, setBlockedDates] = useState<Date[]>([]);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
 
@@ -87,7 +87,7 @@ export default function ManageAvailability() {
         }
     }, [id, router, session, status]);
 
-    const handleDateSelect = (date: Date) => {
+    const _handleDateSelect = (date: Date) => {
         // This is a simplified implementation
         // In a real app, you would use a proper date picker library
         if (!startDate) {

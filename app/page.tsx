@@ -2,34 +2,13 @@
 
 import { Suspense, lazy, useEffect, useState } from 'react';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { Listing } from './types';
-import { getListings } from './lib/api';
 
 // Lazy-loaded components
 const ListingsDisplay = lazy(() => import('@/app/components/ListingsDisplay'));
 const LoadingSkeleton = () => (
   <div className="flex justify-center py-10">
     <div className="animate-pulse">Loading listings...</div>
-  </div>
-);
-
-const ErrorDisplay = ({ error }: { error: string }) => (
-  <div className="bg-red-50 p-4 rounded-lg text-red-500 text-center">
-    {error}
-  </div>
-);
-
-const EmptyListingsDisplay = () => (
-  <div className="text-center py-10 bg-gray-50 rounded-lg">
-    <p>No listings found. Be the first to list your home!</p>
-    <Link
-      href="/add-listing"
-      className="inline-block mt-4 bg-[#FF385C] hover:bg-[#E61E4D] text-white px-6 py-2 rounded-full font-medium"
-    >
-      Add Your Listing
-    </Link>
   </div>
 );
 

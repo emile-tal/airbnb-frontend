@@ -24,10 +24,11 @@ const prismaClientSingleton = () => {
     client.$use(async (params, next) => {
         try {
             return await next(params);
-        } catch (error: any) {
+        } catch (error: unknown) {
             // Detect the specific prepared statement error
-            if (error?.message?.includes('prepared statement') ||
-                (error?.message && /prepared statement ".*?" already exists/.test(error.message))) {
+            if (error instanceof Error &&
+                (error.message?.includes('prepared statement') ||
+                    (error.message && /prepared statement ".*?" already exists/.test(error.message)))) {
                 console.error('Detected prepared statement conflict, reconnecting...');
 
                 try {
@@ -67,30 +68,31 @@ export async function executeWithRetry<T>(
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             return await operation();
-        } catch (error: any) {
+        } catch (error: unknown) {
             lastError = error;
             console.error(`Database operation failed (attempt ${attempt}/${maxRetries}):`, error);
 
             // Only retry if it's a connection-related issue
-            if (!error.message?.includes('prepared statement') &&
-                !error.message?.includes('connection') &&
-                !error.message?.includes('timeout')) {
-                throw error;
-            }
+            if (error instanceof Error &&
+                (error.message?.includes('prepared statement') ||
+                    error.message?.includes('connection') ||
+                    error.message?.includes('timeout'))) {
+                // Wait before retrying (exponential backoff)
+                if (attempt < maxRetries) {
+                    const delay = Math.min(100 * Math.pow(2, attempt), 2000);
+                    console.log(`Retrying after ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
 
-            // Wait before retrying (exponential backoff)
-            if (attempt < maxRetries) {
-                const delay = Math.min(100 * Math.pow(2, attempt), 2000);
-                console.log(`Retrying after ${delay}ms...`);
-                await new Promise(resolve => setTimeout(resolve, delay));
-
-                // Try to reset the connection
-                try {
-                    await prisma.$disconnect();
-                    await prisma.$connect();
-                } catch (connError) {
-                    console.error('Error resetting connection:', connError);
+                    // Try to reset the connection
+                    try {
+                        await prisma.$disconnect();
+                        await prisma.$connect();
+                    } catch (connError) {
+                        console.error('Error resetting connection:', connError);
+                    }
                 }
+            } else {
+                throw error;
             }
         }
     }

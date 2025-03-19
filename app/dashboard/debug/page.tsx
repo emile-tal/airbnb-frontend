@@ -5,13 +5,22 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 
+interface ConnectionInfo {
+    status: number;
+    statusText: string;
+    responseTime: string;
+    ok: boolean;
+    redirected: boolean;
+    type: string;
+}
+
 export default function DebugDashboard() {
     const { data: session, status } = useSession();
-    const [apiResponse, setApiResponse] = useState<any>(null);
+    const [apiResponse, setApiResponse] = useState<Record<string, unknown> | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
-    const [headers, setHeaders] = useState<any>(null);
-    const [connectionInfo, setConnectionInfo] = useState<any>(null);
+    const [headers, setHeaders] = useState<Record<string, string> | null>(null);
+    const [connectionInfo, setConnectionInfo] = useState<ConnectionInfo | null>(null);
 
     // Test when component mounts
     useEffect(() => {
@@ -134,9 +143,9 @@ export default function DebugDashboard() {
                         <div className="mt-2 p-2 bg-yellow-50 text-yellow-700 rounded">
                             <p className="font-medium">Database Connection Issue Detected</p>
                             <p className="text-sm mt-1">
-                                This is a common issue with PostgreSQL in serverless environments. We've updated
+                                This is a common issue with PostgreSQL in serverless environments. We&apos;ve updated
                                 the application to handle this automatically with connection retry logic.
-                                Try clicking "Reset DB Connection" and then test the API again.
+                                Try clicking &quot;Reset DB Connection&quot; and then test the API again.
                             </p>
                         </div>
                     )}

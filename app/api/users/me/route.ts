@@ -29,7 +29,7 @@ export async function GET() {
         }
 
         // We don't want to expose the password
-        const { password, ...userWithoutPassword } = user;
+        const { password: _password, ...userWithoutPassword } = user;
 
         return NextResponse.json(userWithoutPassword);
     } catch (error) {
