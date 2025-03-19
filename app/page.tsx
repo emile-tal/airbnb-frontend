@@ -17,11 +17,17 @@ export default function Home() {
     setIsMounted(true);
     async function fetchListings() {
       try {
+        setLoading(true);
+        setError(null);
         const data = await getListings();
-        setListings(data);
+        setListings(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error('Failed to fetch listings:', err);
-        setError('Failed to load listings. Please try again later.');
+        let errorMessage = 'Failed to load listings. Please try again later.';
+        if (err && typeof err === 'object' && 'message' in err) {
+          errorMessage = `Error: ${err.message}`;
+        }
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }

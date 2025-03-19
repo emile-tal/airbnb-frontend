@@ -11,7 +11,7 @@ import { getListing } from '../../lib/api';
 export default function ListingDetail() {
     const router = useRouter();
     const params = useParams();
-    const id = params.id as string;
+    const { id } = params;
 
     const [listing, setListing] = useState<Listing | null>(null);
     const [loading, setLoading] = useState(true);
@@ -21,7 +21,7 @@ export default function ListingDetail() {
         setIsMounted(true);
         const fetchListing = async () => {
             try {
-                const listingData = await getListing(id);
+                const listingData = await getListing(id as string);
                 setListing(listingData);
             } catch (error) {
                 console.error('Error fetching listing:', error);

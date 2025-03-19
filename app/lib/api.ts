@@ -34,6 +34,7 @@ export async function getListings(): Promise<Listing[]> {
                 headers: {
                     'Accept': 'application/json',
                 },
+                next: { revalidate: 0 } // Ensure we're not using cached data
             });
 
             if (!response.ok) {
@@ -43,19 +44,27 @@ export async function getListings(): Promise<Listing[]> {
                 try {
                     const errorBody = await response.json();
                     console.error('Client API: Error details:', errorBody);
+                    throw new ApiError(errorBody.message || 'Failed to retrieve listings', response.status);
                 } catch (jsonError) {
                     console.error('Client API: Could not parse error response body');
+                    throw new ApiError('Failed to retrieve listings', response.status);
                 }
-
-                throw new ApiError('Failed to retrieve listings', response.status);
             }
 
             const data = await response.json();
+            if (!data || !Array.isArray(data)) {
+                console.error('Client API: Unexpected data format received:', data);
+                throw new ApiError('Unexpected data format received from API', 500);
+            }
+
             console.log(`Client API: Successfully fetched ${data.length} listings`);
             return data;
         } catch (error) {
             console.error("Client API: Error getting listings:", error);
-            throw error;
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError('Failed to retrieve listings', 500);
         }
     };
 
@@ -77,6 +86,56 @@ export async function getListings(): Promise<Listing[]> {
 
     // This should never be reached due to the throw in the while loop
     throw new ApiError('Failed to retrieve listings', 500);
+}
+
+// Get only user's listings (for dashboard)
+export async function getUserListings(): Promise<Listing[]> {
+    try {
+        console.log('Client API: Fetching user listings');
+        const baseUrl = getBaseUrl();
+        console.log(`Client API: getUserListings using base URL: ${baseUrl}`);
+
+        const response = await fetch(`${baseUrl}/api/listings/user`, {
+            cache: 'no-store',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+            },
+            next: { revalidate: 0 } // Ensure we're not using cached data
+        });
+
+        console.log(`Client API: getUserListings response status: ${response.status}`);
+
+        if (!response.ok) {
+            console.error('Client API: Error response from /api/listings/user', response.status);
+
+            try {
+                const errorBody = await response.json();
+                console.error('Client API: Error details:', errorBody);
+                throw new ApiError(errorBody.message || 'Failed to retrieve user listings', response.status);
+            } catch (jsonError) {
+                console.error('Client API: Could not parse error response body', jsonError);
+                throw new ApiError('Failed to retrieve user listings', response.status);
+            }
+        }
+
+        const data = await response.json();
+        console.log(`Client API: getUserListings raw response:`, data);
+
+        if (!data || !Array.isArray(data)) {
+            console.error('Client API: Unexpected data format received from user listings:', data);
+            return []; // Return empty array instead of throwing
+        }
+
+        console.log(`Client API: Successfully fetched ${data.length} user listings`);
+        return data;
+    } catch (error) {
+        console.error("Client API: Error getting user listings:", error);
+        if (error instanceof ApiError) {
+            throw error;
+        }
+        throw new ApiError('Failed to retrieve user listings', 500);
+    }
 }
 
 export async function getListing(id: string): Promise<Listing> {

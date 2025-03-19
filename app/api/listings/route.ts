@@ -22,8 +22,15 @@ export async function GET(request: Request) {
         try {
             console.log('API Route: Attempting to fetch listings...');
 
-            // Connect to the database first
-            await prisma.$connect();
+            // Check database connection first
+            const isConnected = await checkDatabaseConnection();
+            if (!isConnected) {
+                console.error('API Route: Database connection check failed');
+                return NextResponse.json(
+                    { error: "Database connection error", message: "Failed to connect to database" },
+                    { status: 500 }
+                );
+            }
 
             // Simple query approach with no special options
             const listings = await prisma.listing.findMany({

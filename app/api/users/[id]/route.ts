@@ -7,10 +7,13 @@ interface RouteParams {
     };
 }
 
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: Request, context: RouteParams) {
+    const { params } = context;
+    const { id } = params;
+
     try {
         const user = await prisma.user.findUnique({
-            where: { id: params.id },
+            where: { id: id },
         });
 
         if (!user) {
@@ -24,11 +27,14 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 }
 
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: Request, context: RouteParams) {
+    const { params } = context;
+    const { id } = params;
+
     try {
         const body = await request.json();
         const user = await prisma.user.update({
-            where: { id: params.id },
+            where: { id: id },
             data: body,
         });
 

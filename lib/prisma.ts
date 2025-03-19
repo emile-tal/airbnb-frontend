@@ -8,24 +8,122 @@ const globalForPrisma = globalThis as unknown as {
     prisma: PrismaClient | undefined;
 };
 
-// Create a new PrismaClient instance
+// Create a new PrismaClient instance with connection retry logic and pools
 const prismaClientSingleton = () => {
-    return new PrismaClient({
-        log: ['query', 'error', 'warn']
+    const client = new PrismaClient({
+        log: ['query', 'error', 'warn'],
+        datasources: {
+            db: {
+                url: process.env.POSTGRES_PRISMA_URL,
+            },
+        },
+        errorFormat: 'pretty',
     });
+
+    // Add middleware to handle connection issues
+    client.$use(async (params, next) => {
+        try {
+            return await next(params);
+        } catch (error: any) {
+            // Detect the specific prepared statement error
+            if (error?.message?.includes('prepared statement') ||
+                (error?.message && /prepared statement ".*?" already exists/.test(error.message))) {
+                console.error('Detected prepared statement conflict, reconnecting...');
+
+                try {
+                    await client.$disconnect();
+                    await client.$connect();
+
+                    // Retry the operation with a fresh connection
+                    console.log('Retrying operation after reconnection...');
+                    return await next(params);
+                } catch (retryError) {
+                    console.error('Error during connection retry:', retryError);
+                    throw retryError;
+                }
+            }
+
+            throw error;
+        }
+    });
+
+    return client;
 };
 
+// Create and export the prisma client
 export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// Only register the client as global in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+    globalForPrisma.prisma = prisma;
+}
+
+// Function to safely execute a Prisma query with retries
+export async function executeWithRetry<T>(
+    operation: () => Promise<T>,
+    maxRetries = 3
+): Promise<T> {
+    let lastError;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await operation();
+        } catch (error: any) {
+            lastError = error;
+            console.error(`Database operation failed (attempt ${attempt}/${maxRetries}):`, error);
+
+            // Only retry if it's a connection-related issue
+            if (!error.message?.includes('prepared statement') &&
+                !error.message?.includes('connection') &&
+                !error.message?.includes('timeout')) {
+                throw error;
+            }
+
+            // Wait before retrying (exponential backoff)
+            if (attempt < maxRetries) {
+                const delay = Math.min(100 * Math.pow(2, attempt), 2000);
+                console.log(`Retrying after ${delay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+
+                // Try to reset the connection
+                try {
+                    await prisma.$disconnect();
+                    await prisma.$connect();
+                } catch (connError) {
+                    console.error('Error resetting connection:', connError);
+                }
+            }
+        }
+    }
+
+    throw lastError;
+}
+
+// Function to try reconnecting to the database
+export async function reconnectDatabase() {
+    try {
+        console.log('Attempting to reconnect to database...');
+        await prisma.$disconnect();
+        await prisma.$connect();
+        console.log('Database reconnection successful');
+        return true;
+    } catch (error) {
+        console.error('Database reconnection failed:', error);
+        return false;
+    }
+}
 
 // Add a method to check database connection
 export async function checkDatabaseConnection() {
     try {
         console.log('Checking database connection...');
-        // Use a simple query with findFirst instead of raw SQL
-        // This avoids prepared statement issues
         await prisma.$connect();
+
+        // Test the connection with a simple query
+        await prisma.user.findFirst({
+            where: { id: 'connection-test' },
+            select: { id: true }
+        });
+
         console.log('Database connection successful');
         return true;
     } catch (error) {

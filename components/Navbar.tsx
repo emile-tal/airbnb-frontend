@@ -1,6 +1,7 @@
 "use client";
 
 import { signOut, useSession } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,6 +9,33 @@ import { useRouter } from "next/navigation";
 export default function Navbar() {
     const { data: session } = useSession();
     const router = useRouter();
+    const [hasListings, setHasListings] = useState(false);
+    const [isCheckingListings, setIsCheckingListings] = useState(false);
+
+    useEffect(() => {
+        if (session) {
+            setIsCheckingListings(true);
+            // Check if user has listings
+            fetch("/api/listings/user/check")
+                .then((res) => {
+                    if (!res.ok) {
+                        throw new Error("Failed to check listings");
+                    }
+                    return res.json();
+                })
+                .then((data) => {
+                    setHasListings(data.hasListings);
+                    setIsCheckingListings(false);
+                })
+                .catch((error) => {
+                    console.error("Error checking user listings:", error);
+                    setIsCheckingListings(false);
+                    // Default to showing the dashboard link if we can't check
+                    // This way users don't lose access to their dashboard if the check fails
+                    setHasListings(true);
+                });
+        }
+    }, [session]);
 
     return (
         <nav className="bg-white shadow-sm">
@@ -30,8 +58,16 @@ export default function Navbar() {
                     <div className="flex items-center">
                         {session ? (
                             <div className="flex items-center space-x-4">
+                                {(hasListings || isCheckingListings) && (
+                                    <Link
+                                        href="/dashboard"
+                                        className="px-4 py-2 text-sm font-medium text-gray-900 hover:text-gray-500 transition-colors"
+                                    >
+                                        Dashboard
+                                    </Link>
+                                )}
                                 <Link
-                                    href="/listings/create"
+                                    href="/add-listing"
                                     className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600 transition-colors"
                                 >
                                     Create Listing
