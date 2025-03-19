@@ -4,49 +4,41 @@ import { PrismaClient } from '@prisma/client';
 // exhausting your database connection limit.
 // Learn more: https://pris.ly/d/help/next-js-best-practices
 
-let prisma: PrismaClient;
+const globalForPrisma = globalThis as unknown as {
+    prisma: PrismaClient | undefined;
+};
 
-if (typeof window === 'undefined') {
-    // This is on the server side
-    console.log('Initializing Prisma client on server side');
+// Create a new PrismaClient instance
+const prismaClientSingleton = () => {
+    return new PrismaClient({
+        log: ['query', 'error', 'warn']
+    });
+};
 
-    // Check if we already have a connection to the database
-    if (process.env.NODE_ENV === 'production') {
-        console.log('Production environment: creating new PrismaClient');
-        prisma = new PrismaClient();
-    } else {
-        // In development, use a global variable to preserve connection across hot-reloads
-        console.log('Development environment: checking for existing global PrismaClient');
-        const globalWithPrisma = global as typeof globalThis & {
-            prisma: PrismaClient;
-        };
+export const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 
-        if (!globalWithPrisma.prisma) {
-            console.log('No existing PrismaClient found: creating new instance');
-            globalWithPrisma.prisma = new PrismaClient({
-                log: ['query', 'error', 'warn'],
-                datasources: {
-                    db: {
-                        url: process.env.POSTGRES_URL_NON_POOLING // Use non-pooling connection to avoid prepared statement conflicts
-                    }
-                }
+if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+
+// Add a method to check database connection
+export async function checkDatabaseConnection() {
+    try {
+        console.log('Checking database connection...');
+        // Use a simple query with findFirst instead of raw SQL
+        // This avoids prepared statement issues
+        await prisma.$connect();
+        console.log('Database connection successful');
+        return true;
+    } catch (error) {
+        console.error('Database connection failed:', error);
+        if (error instanceof Error) {
+            console.error('Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
             });
-        } else {
-            console.log('Reusing existing PrismaClient instance');
         }
-
-        prisma = globalWithPrisma.prisma;
+        return false;
     }
-
-    console.log('Prisma client initialized successfully');
-} else {
-    // This is on the client side
-    console.log('Attempted to initialize Prisma client on client side');
-    // Throw a meaningful error if someone tries to use PrismaClient
-    throw new Error(
-        'PrismaClient cannot be used on the client side. Use server components or API routes instead.'
-    );
 }
 
-export { prisma };
 export default prisma; 

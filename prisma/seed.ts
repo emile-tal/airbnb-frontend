@@ -38,7 +38,7 @@ async function main() {
         {
             title: 'Mountain Cabin Retreat',
             description: 'Cozy cabin nestled in the mountains. Perfect for hiking enthusiasts and nature lovers. Enjoy the peaceful surroundings and breathtaking views.',
-            imageSrc: 'https://images.unsplash.com/photo-1518732714860-b62f2e01afc9',
+            imageSrc: 'https://images.unsplash.com/photo-1454496522488-7a8e488e8606',
             category: 'Cabin',
             roomCount: 2,
             bathroomCount: 1,

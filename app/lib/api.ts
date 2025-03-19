@@ -10,35 +10,81 @@ export class ApiError extends Error {
     }
 }
 
+const getBaseUrl = () => {
+    if (typeof window !== 'undefined') {
+        return window.location.origin;
+    }
+    return process.env.NEXTAUTH_URL || 'http://localhost:3000';
+};
+
 // Listings (formerly Properties)
 export async function getListings(): Promise<Listing[]> {
-    try {
-        console.log('Client API: Fetching listings');
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const response = await fetch(`${origin}/api/listings`, {
-            cache: 'no-store'
-        });
+    const maxRetries = 2;
+    let retries = 0;
 
-        if (!response.ok) {
-            console.error('Client API: Error response from /api/listings', response.status);
-            throw new ApiError('Failed to retrieve listings', response.status);
+    const fetchListings = async (): Promise<Listing[]> => {
+        try {
+            console.log('Client API: Fetching listings');
+            const baseUrl = getBaseUrl();
+            console.log(`Client API: Using base URL: ${baseUrl}`);
+
+            const response = await fetch(`${baseUrl}/api/listings`, {
+                cache: 'no-store',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                },
+            });
+
+            if (!response.ok) {
+                console.error('Client API: Error response from /api/listings', response.status);
+
+                // If response has JSON body, log it for debugging
+                try {
+                    const errorBody = await response.json();
+                    console.error('Client API: Error details:', errorBody);
+                } catch (jsonError) {
+                    console.error('Client API: Could not parse error response body');
+                }
+
+                throw new ApiError('Failed to retrieve listings', response.status);
+            }
+
+            const data = await response.json();
+            console.log(`Client API: Successfully fetched ${data.length} listings`);
+            return data;
+        } catch (error) {
+            console.error("Client API: Error getting listings:", error);
+            throw error;
         }
+    };
 
-        const data = await response.json();
-        console.log(`Client API: Successfully fetched ${data.length} listings`);
-        return data;
-    } catch (error) {
-        console.error("Client API: Error getting listings:", error);
-        throw new ApiError('Failed to retrieve listings', 500);
+    while (retries <= maxRetries) {
+        try {
+            return await fetchListings();
+        } catch (error) {
+            if (retries === maxRetries) {
+                console.error(`Client API: Max retries (${maxRetries}) reached for fetching listings`);
+                throw new ApiError('Failed to retrieve listings after multiple attempts',
+                    error instanceof ApiError ? error.status : 500);
+            }
+            retries++;
+            console.log(`Client API: Retrying fetch listings (${retries}/${maxRetries})`);
+            // Add a small delay before retrying
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
     }
+
+    // This should never be reached due to the throw in the while loop
+    throw new ApiError('Failed to retrieve listings', 500);
 }
 
 export async function getListing(id: string): Promise<Listing> {
     try {
         console.log(`Client API: Fetching listing with id ${id}`);
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const response = await fetch(`${origin}/api/listings/${id}`, {
-            cache: 'no-store'
+        const response = await fetch(`${getBaseUrl()}/api/listings/${id}`, {
+            cache: 'no-store',
+            credentials: 'include',
         });
 
         if (!response.ok) {
@@ -58,19 +104,42 @@ export async function getListing(id: string): Promise<Listing> {
 
 export async function createListing(listing: Omit<Listing, 'id' | 'createdAt'>): Promise<Listing> {
     try {
-        console.log('Client API: Creating new listing');
-        const origin = typeof window !== 'undefined' ? window.location.origin : '';
-        const response = await fetch(`${origin}/api/listings`, {
+        console.log('Client API: Creating new listing', listing);
+
+        // Validate required fields before sending
+        const requiredFields = ['title', 'description', 'imageSrc', 'category', 'roomCount',
+            'bathroomCount', 'guestCount', 'locationValue', 'price'];
+
+        const missingFields = requiredFields.filter(field => !listing[field as keyof typeof listing]);
+
+        if (missingFields.length > 0) {
+            console.error('Client API: Missing required fields:', missingFields);
+            throw new ApiError(`Missing required fields: ${missingFields.join(', ')}`, 400);
+        }
+
+        const response = await fetch(`${getBaseUrl()}/api/listings`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(listing),
+            credentials: 'include',
         });
 
         if (!response.ok) {
             console.error('Client API: Error response from POST /api/listings', response.status);
-            throw new ApiError('Failed to create listing', response.status);
+
+            // Try to get more detailed error info
+            let errorMessage = 'Failed to create listing';
+            try {
+                const errorResponse = await response.json();
+                console.error('Client API: Server error details:', errorResponse);
+                errorMessage = errorResponse.message || errorMessage;
+            } catch (jsonError) {
+                console.error('Client API: Could not parse error response:', jsonError);
+            }
+
+            throw new ApiError(errorMessage, response.status);
         }
 
         const data = await response.json();
@@ -78,6 +147,9 @@ export async function createListing(listing: Omit<Listing, 'id' | 'createdAt'>):
         return data;
     } catch (error) {
         console.error("Client API: Error creating listing:", error);
+        if (error instanceof ApiError) {
+            throw error;
+        }
         throw new ApiError('Failed to create listing', 500);
     }
 }

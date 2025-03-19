@@ -7,17 +7,20 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "db:reset": "ts-node prisma/scripts/reset-db.ts"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "^2.8.0",
     "@prisma/client": "^6.5.0",
     "@types/bcrypt": "^5.0.2",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.6.0",
     "next": "15.2.2",
+    "next-auth": "^4.24.11",
     "next-cloudinary": "^6.16.0",
     "prisma": "^6.5.0",
     "react": "^19.0.0",
