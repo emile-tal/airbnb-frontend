@@ -75,6 +75,15 @@ export async function POST(request: Request) {
                 where: {
                     listingId: { in: verifiedListingIds },
                 },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                            email: true,
+                        }
+                    }
+                },
                 orderBy: {
                     startDate: "asc",
                 },

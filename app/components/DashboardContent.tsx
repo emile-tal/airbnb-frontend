@@ -43,32 +43,53 @@ export default function DashboardContent({ activeTab }: DashboardContentProps) {
                 setError(null);
 
                 // Fetch user's listings using the API client
-                const listingsData = await getUserListings();
-                console.log("Dashboard: Received listings data:", listingsData);
-                setListings(Array.isArray(listingsData) ? listingsData : []);
+                try {
+                    const listingsData = await getUserListings();
+                    console.log("Dashboard: Received listings data:", listingsData);
+                    setListings(Array.isArray(listingsData) ? listingsData : []);
 
-                // Fetch reservations for all user listings
-                if (listingsData && Array.isArray(listingsData) && listingsData.length > 0) {
-                    console.log(`Dashboard: Fetching reservations for ${listingsData.length} listings`);
-                    const listingIds = listingsData.map((listing) => listing.id);
-                    const response = await fetch("/api/reservations/host", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ listingIds }),
-                    });
+                    // Fetch reservations for all user listings
+                    if (listingsData && Array.isArray(listingsData) && listingsData.length > 0) {
+                        console.log(`Dashboard: Fetching reservations for ${listingsData.length} listings`);
+                        const listingIds = listingsData.map((listing) => listing.id);
+                        const response = await fetch("/api/reservations/host", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ listingIds }),
+                        });
 
-                    if (!response.ok) {
-                        console.error("Dashboard: Error response from reservations API:", response.status);
-                        throw new Error(`Failed to fetch reservations: ${response.status}`);
+                        if (!response.ok) {
+                            console.error("Dashboard: Error response from reservations API:", response.status);
+                            throw new Error(`Failed to fetch reservations: ${response.status}`);
+                        }
+
+                        const reservationsData = await response.json();
+                        console.log("Dashboard: Received reservations data:", reservationsData);
+                        const reservationsArray = Array.isArray(reservationsData) ? reservationsData : [];
+                        setReservations(reservationsArray);
+                    } else {
+                        console.log("Dashboard: No listings found, skipping reservation fetch");
+                        setReservations([]);
                     }
+                } catch (apiError) {
+                    console.error("Dashboard: API error:", apiError);
 
-                    const reservationsData = await response.json();
-                    console.log("Dashboard: Received reservations data:", reservationsData);
-                    const reservationsArray = Array.isArray(reservationsData) ? reservationsData : [];
-                    setReservations(reservationsArray);
-                } else {
-                    console.log("Dashboard: No listings found, skipping reservation fetch");
-                    setReservations([]);
+                    // Set a user-friendly error message based on the status code
+                    if (apiError instanceof Error) {
+                        const errorMessage = apiError.message || "Failed to load dashboard data";
+
+                        if (errorMessage.includes("401") || errorMessage.includes("authentication")) {
+                            setError("Authentication error. Please log in again.");
+                        } else if (errorMessage.includes("404")) {
+                            setError("User profile not found. Please complete your profile setup.");
+                        } else if (errorMessage.includes("timeout") || errorMessage.includes("408")) {
+                            setError("Request timed out. Please check your connection and try again.");
+                        } else {
+                            setError(`Error loading your listings: ${errorMessage}`);
+                        }
+                    } else {
+                        setError("Failed to load dashboard data. Please try again later.");
+                    }
                 }
             } catch (error) {
                 console.error("Dashboard: Error fetching dashboard data:", error);
@@ -84,6 +105,11 @@ export default function DashboardContent({ activeTab }: DashboardContentProps) {
 
         fetchDashboardData();
     }, [isLoaded]);
+
+    // Retry fetching dashboard data
+    const handleRetry = () => {
+        setIsLoaded(false); // This will trigger the useEffect to run again
+    };
 
     const handleDeleteListing = async (listingId: string) => {
         if (confirm("Are you sure you want to delete this listing? This action cannot be undone.")) {
@@ -148,16 +174,16 @@ export default function DashboardContent({ activeTab }: DashboardContentProps) {
     }
 
     const renderListings = () => (
-        <div className="mb-8">
-            <h2 className="text-xl font-semibold mb-4">Your Listings</h2>
-            {!listings || listings.length === 0 ? (
-                <div className="bg-gray-50 p-6 rounded-lg text-center">
-                    <p className="text-gray-600 mb-4">You don&apos;t have any listings yet.</p>
+        <div>
+            <h2 className="text-xl font-semibold mb-4">My Listings</h2>
+            {error ? null : listings.length === 0 ? (
+                <div className="bg-gray-50 p-6 rounded-lg">
+                    <p className="text-gray-600">You don&apos;t have any listings yet.</p>
                     <Link
                         href="/add-listing"
-                        className="px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600 transition-colors hover:cursor-pointer"
+                        className="mt-4 inline-block px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600 transition-colors hover:cursor-pointer"
                     >
-                        Create Your First Listing
+                        Add your first listing
                     </Link>
                 </div>
             ) : (
@@ -218,7 +244,7 @@ export default function DashboardContent({ activeTab }: DashboardContentProps) {
     const renderReservations = () => (
         <div>
             <h2 className="text-xl font-semibold mb-4">Reservations for Your Properties</h2>
-            {(!reservations || reservations.length === 0) ? (
+            {error ? null : (!reservations || reservations.length === 0) ? (
                 <div className="bg-gray-50 p-6 rounded-lg">
                     <p className="text-gray-600">You don&apos;t have any reservations yet.</p>
                 </div>
@@ -256,7 +282,9 @@ export default function DashboardContent({ activeTab }: DashboardContentProps) {
                                 return (
                                     <tr key={reservation.id}>
                                         <td className="border p-2">{listing?.title || "Unknown property"}</td>
-                                        <td className="border p-2">Guest #{reservation.userId.slice(0, 6)}</td>
+                                        <td className="border p-2">
+                                            {reservation.user?.name || `Guest #${reservation.userId.slice(0, 6)}`}
+                                        </td>
                                         <td className="border p-2">{formatDate(reservation.startDate)}</td>
                                         <td className="border p-2">{formatDate(reservation.endDate)}</td>
                                         <td className="border p-2">${reservation.totalPrice}</td>
@@ -301,14 +329,24 @@ export default function DashboardContent({ activeTab }: DashboardContentProps) {
     );
 
     return (
-        <>
+        <div>
+            {error && <ErrorDisplay error={error} />}
+            {error && (
+                <div className="flex justify-center mb-6">
+                    <button
+                        onClick={handleRetry}
+                        className="px-4 py-2 bg-rose-500 text-white rounded-md hover:bg-rose-600 transition-colors"
+                    >
+                        Retry Loading
+                    </button>
+                </div>
+            )}
             {updateSuccess && (
                 <div className="mb-6 bg-green-50 p-4 rounded-lg text-green-600">
                     {updateSuccess}
                 </div>
             )}
-
             {activeTab === 'listings' ? renderListings() : renderReservations()}
-        </>
+        </div>
     );
 } 

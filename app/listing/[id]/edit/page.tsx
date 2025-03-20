@@ -1,5 +1,6 @@
 "use client";
 
+import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -7,6 +8,36 @@ import ImageUpload from "@/app/components/ImageUpload";
 import Link from "next/link";
 import { Listing } from "@/app/types";
 import { useSession } from "next-auth/react";
+
+// Categories list - we define it here to ensure consistency
+const CATEGORIES = [
+    { value: "apartment", label: "Apartment" },
+    { value: "house", label: "House" },
+    { value: "cabin", label: "Cabin" },
+    { value: "villa", label: "Villa" },
+    { value: "beachfront", label: "Beachfront" },
+    { value: "countryside", label: "Countryside" }
+];
+
+// Get category value or normalize it if needed
+const getNormalizedCategory = (category: string): string => {
+    // First try exact match
+    const exactMatch = CATEGORIES.find(c => c.value === category);
+    if (exactMatch) return exactMatch.value;
+
+    // Try case-insensitive match
+    const lowerCase = category.toLowerCase();
+    const caseInsensitiveMatch = CATEGORIES.find(c => c.value.toLowerCase() === lowerCase);
+    if (caseInsensitiveMatch) return caseInsensitiveMatch.value;
+
+    // Try to match by label
+    const labelMatch = CATEGORIES.find(c => c.label.toLowerCase() === lowerCase);
+    if (labelMatch) return labelMatch.value;
+
+    // Return first category as default if no match found
+    console.log(`No category match found for "${category}", using default`);
+    return CATEGORIES[0].value;
+};
 
 export default function EditListing() {
     const params = useParams();
@@ -18,6 +49,7 @@ export default function EditListing() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState("");
+    const [dataLoaded, setDataLoaded] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -47,6 +79,7 @@ export default function EditListing() {
                 }
 
                 const data = await res.json();
+                console.log("Fetched listing data:", data);
 
                 // Check if the listing belongs to the user
                 if (session?.user?.email) {
@@ -59,18 +92,24 @@ export default function EditListing() {
                     }
                 }
 
+                // Normalize the category to ensure it matches our options
+                const normalizedCategory = getNormalizedCategory(data.category);
+                console.log(`Original category: "${data.category}", Normalized: "${normalizedCategory}"`);
+
                 setListing(data);
                 setFormData({
                     title: data.title,
                     description: data.description,
                     imageSrc: data.imageSrc,
-                    category: data.category,
+                    category: normalizedCategory,
                     roomCount: data.roomCount,
                     bathroomCount: data.bathroomCount,
                     guestCount: data.guestCount,
                     locationValue: data.locationValue,
                     price: data.price,
                 });
+
+                setDataLoaded(true);
             } catch (error) {
                 console.error("Error fetching listing:", error);
                 setError("Failed to load listing details");
@@ -91,6 +130,15 @@ export default function EditListing() {
             [name]: name === "price" || name === "roomCount" || name === "bathroomCount" || name === "guestCount"
                 ? parseInt(value)
                 : value,
+        }));
+    };
+
+    // Separate handler for MUI Select component
+    const handleCategoryChange = (value: string) => {
+        console.log("Changing category to:", value);
+        setFormData(prev => ({
+            ...prev,
+            category: value
         }));
     };
 
@@ -155,6 +203,14 @@ export default function EditListing() {
         );
     }
 
+    if (!dataLoaded) {
+        return (
+            <div className="container mx-auto px-4 py-8">
+                <h1 className="text-2xl font-bold mb-6">Preparing form...</h1>
+            </div>
+        );
+    }
+
     return (
         <div className="container mx-auto px-4 py-8">
             <div className="max-w-2xl mx-auto">
@@ -165,6 +221,8 @@ export default function EditListing() {
                         <p className="text-red-500">{error}</p>
                     </div>
                 )}
+
+                <pre className="hidden">Debug - Current category: {formData.category}</pre>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
@@ -196,24 +254,33 @@ export default function EditListing() {
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Category
-                        </label>
-                        <select
-                            name="category"
-                            value={formData.category}
-                            onChange={handleChange}
-                            required
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-rose-500 focus:border-rose-500"
-                        >
-                            <option value="">Select a category</option>
-                            <option value="apartment">Apartment</option>
-                            <option value="house">House</option>
-                            <option value="cabin">Cabin</option>
-                            <option value="villa">Villa</option>
-                            <option value="beachfront">Beachfront</option>
-                            <option value="countryside">Countryside</option>
-                        </select>
+                        <FormControl fullWidth>
+                            <InputLabel id="category-label">Category</InputLabel>
+                            <Select
+                                labelId="category-label"
+                                id="category"
+                                value={formData.category || CATEGORIES[0].value}
+                                label="Category"
+                                onChange={(e) => handleCategoryChange(e.target.value as string)}
+                                sx={{
+                                    '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgb(209, 213, 219)',
+                                    },
+                                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#F43F5E',
+                                    },
+                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: '#F43F5E',
+                                    }
+                                }}
+                            >
+                                {CATEGORIES.map((category) => (
+                                    <MenuItem key={category.value} value={category.value}>
+                                        {category.label}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

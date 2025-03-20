@@ -1,5 +1,6 @@
 'use client';
 
+import { FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import { useEffect, useState } from 'react';
 
 import ImageUpload from '../components/ImageUpload';
@@ -7,12 +8,22 @@ import Link from 'next/link';
 import { createListing } from '../lib/api';
 import { useRouter } from 'next/navigation';
 
+// Categories list - we use the same definition as the edit page for consistency
+const CATEGORIES = [
+    { value: "apartment", label: "Apartment" },
+    { value: "house", label: "House" },
+    { value: "cabin", label: "Cabin" },
+    { value: "villa", label: "Villa" },
+    { value: "beachfront", label: "Beachfront" },
+    { value: "countryside", label: "Countryside" }
+];
+
 export default function AddListing() {
     const router = useRouter();
     const [title, setTitle] = useState('');
     const [locationValue, setLocationValue] = useState('');
     const [price, setPrice] = useState('');
-    const [category, setCategory] = useState('');
+    const [category, setCategory] = useState(CATEGORIES[0].value); // Default to first category
     const [roomCount, setRoomCount] = useState('1');
     const [bathroomCount, setBathroomCount] = useState('1');
     const [guestCount, setGuestCount] = useState('1');
@@ -151,24 +162,33 @@ export default function AddListing() {
 
                         <div className="space-y-4">
                             <div>
-                                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
-                                    Category
-                                </label>
-                                <select
-                                    id="category"
-                                    value={category}
-                                    onChange={(e) => setCategory(e.target.value)}
-                                    className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-[#FF385C] focus:border-[#FF385C]"
-                                    required
-                                >
-                                    <option value="">Select a category</option>
-                                    <option value="Apartment">Apartment</option>
-                                    <option value="House">House</option>
-                                    <option value="Cabin">Cabin</option>
-                                    <option value="Beach">Beach</option>
-                                    <option value="Countryside">Countryside</option>
-                                    <option value="Luxury">Luxury</option>
-                                </select>
+                                <FormControl fullWidth>
+                                    <InputLabel id="category-label">Category</InputLabel>
+                                    <Select
+                                        labelId="category-label"
+                                        id="category"
+                                        value={category}
+                                        label="Category"
+                                        onChange={(e) => setCategory(e.target.value as string)}
+                                        sx={{
+                                            '& .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: 'rgb(209, 213, 219)',
+                                            },
+                                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#FF385C',
+                                            },
+                                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                                borderColor: '#FF385C',
+                                            }
+                                        }}
+                                    >
+                                        {CATEGORIES.map((category) => (
+                                            <MenuItem key={category.value} value={category.value}>
+                                                {category.label}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
                             </div>
 
                             <div className="grid grid-cols-3 gap-4">

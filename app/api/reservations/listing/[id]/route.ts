@@ -69,6 +69,15 @@ export async function GET(
             where: {
                 listingId: id,
             },
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    }
+                }
+            },
             orderBy: {
                 startDate: "asc",
             },

@@ -41,6 +41,11 @@ export interface Reservation {
         category: string;
         userId: string;
     };
+    user?: {
+        id: string;
+        name: string | null;
+        email: string;
+    };
 }
 
 export interface Favorite {

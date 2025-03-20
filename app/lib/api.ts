@@ -95,46 +95,73 @@ export async function getUserListings(): Promise<Listing[]> {
         const baseUrl = getBaseUrl();
         console.log(`Client API: getUserListings using base URL: ${baseUrl}`);
 
-        const response = await fetch(`${baseUrl}/api/listings/user`, {
-            cache: 'no-store',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-            },
-            next: { revalidate: 0 } // Ensure we're not using cached data
-        });
+        // Add timeout to detect hanging requests
+        const controller = new AbortController();
+        const timeout = setTimeout(() => {
+            controller.abort();
+        }, 15000); // 15-second timeout
 
-        console.log(`Client API: getUserListings response status: ${response.status}`);
+        try {
+            const response = await fetch(`${baseUrl}/api/listings/user`, {
+                cache: 'no-store',
+                credentials: 'include',
+                headers: {
+                    'Accept': 'application/json',
+                },
+                signal: controller.signal,
+                next: { revalidate: 0 } // Ensure we're not using cached data
+            });
 
-        if (!response.ok) {
-            console.error('Client API: Error response from /api/listings/user', response.status);
+            clearTimeout(timeout);
 
-            try {
-                const errorBody = await response.json();
-                console.error('Client API: Error details:', errorBody);
-                throw new ApiError(errorBody.message || 'Failed to retrieve user listings', response.status);
-            } catch (jsonError) {
-                console.error('Client API: Could not parse error response body', jsonError);
-                throw new ApiError('Failed to retrieve user listings', response.status);
+            console.log(`Client API: getUserListings response status: ${response.status}`);
+
+            if (!response.ok) {
+                console.error('Client API: Error response from /api/listings/user', response.status);
+
+                try {
+                    const errorBody = await response.json();
+                    console.error('Client API: Error details:', errorBody);
+                    throw new ApiError(
+                        errorBody.message || `Failed to retrieve user listings: ${response.status}`,
+                        response.status
+                    );
+                } catch (jsonError) {
+                    console.error('Client API: Could not parse error response body', jsonError);
+                    throw new ApiError(`Failed to retrieve user listings: ${response.status}`, response.status);
+                }
             }
+
+            const data = await response.json();
+            console.log(`Client API: getUserListings raw response:`, data);
+
+            if (!data || !Array.isArray(data)) {
+                console.error('Client API: Unexpected data format received from user listings:', data);
+                return []; // Return empty array instead of throwing
+            }
+
+            console.log(`Client API: Successfully fetched ${data.length} user listings`);
+            return data;
+        } catch (fetchError: unknown) {
+            clearTimeout(timeout);
+
+            // Check if it's an AbortError (timeout)
+            if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                console.error('Client API: Request timeout fetching user listings');
+                throw new ApiError('Request timed out while fetching user listings', 408);
+            }
+
+            throw fetchError;
         }
-
-        const data = await response.json();
-        console.log(`Client API: getUserListings raw response:`, data);
-
-        if (!data || !Array.isArray(data)) {
-            console.error('Client API: Unexpected data format received from user listings:', data);
-            return []; // Return empty array instead of throwing
-        }
-
-        console.log(`Client API: Successfully fetched ${data.length} user listings`);
-        return data;
     } catch (error) {
         console.error("Client API: Error getting user listings:", error);
         if (error instanceof ApiError) {
             throw error;
         }
-        throw new ApiError('Failed to retrieve user listings', 500);
+        throw new ApiError(
+            error instanceof Error ? error.message : 'Failed to retrieve user listings',
+            500
+        );
     }
 }
 

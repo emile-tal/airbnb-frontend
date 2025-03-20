@@ -230,7 +230,7 @@ export default function ManageAvailability() {
                                         return (
                                             <tr key={reservation.id} className="hover:bg-gray-50">
                                                 <td className="border p-2">
-                                                    Guest ID: {reservation.userId.substring(0, 8)}...
+                                                    {reservation.user?.name || `Guest ID: ${reservation.userId.substring(0, 8)}...`}
                                                 </td>
                                                 <td className="border p-2">
                                                     {startDate.toLocaleDateString()}
