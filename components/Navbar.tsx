@@ -58,6 +58,12 @@ export default function Navbar() {
                     <div className="flex items-center">
                         {session ? (
                             <div className="flex items-center space-x-4">
+                                <Link
+                                    href="/trips"
+                                    className="px-4 py-2 text-sm font-medium text-gray-900 hover:text-gray-500 transition-colors"
+                                >
+                                    Trips
+                                </Link>
                                 {(hasListings || isCheckingListings) && (
                                     <Link
                                         href="/dashboard"

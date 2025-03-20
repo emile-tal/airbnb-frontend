@@ -303,6 +303,57 @@ export async function getListingReservations(listingId: string): Promise<Reserva
     }
 }
 
+export async function getReservation(id: string): Promise<Reservation> {
+    try {
+        const response = await fetch(`/api/reservations/${id}`);
+
+        if (!response.ok) {
+            throw new ApiError('Failed to retrieve reservation', response.status);
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error("Error getting reservation:", error);
+        throw new ApiError('Failed to retrieve reservation', 500);
+    }
+}
+
+export async function updateReservationStatus(id: string, status: 'pending' | 'accepted' | 'rejected'): Promise<Reservation> {
+    try {
+        const response = await fetch(`/api/reservations/${id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ status }),
+        });
+
+        if (!response.ok) {
+            throw new ApiError('Failed to update reservation status', response.status);
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error("Error updating reservation status:", error);
+        throw new ApiError('Failed to update reservation status', 500);
+    }
+}
+
+export async function getCurrentUserTrips(): Promise<Reservation[]> {
+    try {
+        const response = await fetch('/api/trips');
+
+        if (!response.ok) {
+            throw new ApiError('Failed to retrieve trips', response.status);
+        }
+
+        return response.json();
+    } catch (error) {
+        console.error("Error getting user trips:", error);
+        throw new ApiError('Failed to retrieve trips', 500);
+    }
+}
+
 // User
 export async function getUserById(id: string): Promise<User> {
     try {

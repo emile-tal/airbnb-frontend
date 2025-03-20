@@ -32,6 +32,15 @@ export interface Reservation {
     endDate: Date;
     totalPrice: number;
     createdAt: Date;
+    status: string;
+    listing?: {
+        id: string;
+        title: string;
+        imageSrc: string;
+        locationValue: string;
+        category: string;
+        userId: string;
+    };
 }
 
 export interface Favorite {

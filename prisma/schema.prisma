@@ -68,6 +68,7 @@ model Reservation {
   endDate    DateTime
   totalPrice Int
   createdAt  DateTime @default(now())
+  status     String   @default("pending")
   listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
