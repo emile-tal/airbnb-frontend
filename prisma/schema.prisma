@@ -57,6 +57,7 @@ model Listing {
   favorites     Favorite[]
   user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   reservations  Reservation[]
+  availability  ListingAvailability[]
 }
 
 model Reservation {
@@ -79,4 +80,14 @@ model Favorite {
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, listingId])
+}
+
+model ListingAvailability {
+  id        String   @id @default(uuid())
+  listingId String
+  startDate DateTime
+  endDate   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }

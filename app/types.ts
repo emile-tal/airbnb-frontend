@@ -53,4 +53,13 @@ export interface Account {
     scope: string | null;
     id_token: string | null;
     session_state: string | null;
+}
+
+export interface ListingAvailability {
+    id: string;
+    listingId: string;
+    startDate: Date;
+    endDate: Date;
+    createdAt: Date;
+    updatedAt: Date;
 } 

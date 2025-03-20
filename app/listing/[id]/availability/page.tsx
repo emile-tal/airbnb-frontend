@@ -21,6 +21,7 @@ export default function ManageAvailability() {
     // This is a simplified version of availability management
     // A complete implementation would include a date picker and more complex availability rules
     const [_blockedDates, setBlockedDates] = useState<Date[]>([]);
+    const [availabilities, setAvailabilities] = useState<any[]>([]);
     const [startDate, setStartDate] = useState<Date | null>(null);
     const [endDate, setEndDate] = useState<Date | null>(null);
 
@@ -58,6 +59,11 @@ export default function ManageAvailability() {
                 const reservationsRes = await fetch(`/api/reservations/listing/${id}`);
                 const reservationsData = await reservationsRes.json();
                 setReservations(reservationsData);
+
+                // Fetch availability data for this listing
+                const availabilityRes = await fetch(`/api/availability?listingId=${id}`);
+                const availabilityData = await availabilityRes.json();
+                setAvailabilities(availabilityData);
 
                 // In a real implementation, you would also fetch blocked dates from the backend
                 // For now, we'll just extract dates from reservations
@@ -106,12 +112,58 @@ export default function ManageAvailability() {
             return;
         }
 
-        // Here you would call an API to block these dates
-        // This is just a placeholder for the actual implementation
-        alert(`Dates blocked from ${startDate.toLocaleDateString()} to ${endDate.toLocaleDateString()}`);
+        try {
+            // Call the API to block these dates
+            const response = await fetch('/api/availability', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    listingId: id,
+                    startDate: startDate.toISOString(),
+                    endDate: endDate.toISOString(),
+                }),
+            });
 
-        // In a real implementation, you would refresh the data after blocking dates
-        // And add the blocked dates to the blockedDates state
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to block dates');
+            }
+
+            const newAvailability = await response.json();
+
+            // Update the UI
+            setAvailabilities([...availabilities, newAvailability]);
+            setStartDate(null);
+            setEndDate(null);
+        } catch (error) {
+            console.error('Error blocking dates:', error);
+            setError(error instanceof Error ? error.message : 'Failed to block dates');
+        }
+    };
+
+    const handleRemoveAvailability = async (availabilityId: string) => {
+        if (!confirm('Are you sure you want to remove this blocked period?')) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/availability/${availabilityId}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to remove availability');
+            }
+
+            // Update the UI
+            setAvailabilities(availabilities.filter(a => a.id !== availabilityId));
+        } catch (error) {
+            console.error('Error removing availability:', error);
+            setError(error instanceof Error ? error.message : 'Failed to remove availability');
+        }
     };
 
     if (isLoading) {
@@ -206,7 +258,7 @@ export default function ManageAvailability() {
                 <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-4">Block Dates</h3>
                     <p className="text-gray-600 mb-4">
-                        Note: This is a simplified interface. In a real application, you would use a calendar date picker to select dates.
+                        Mark dates when your property is unavailable for booking.
                     </p>
 
                     <div className="flex flex-col md:flex-row gap-4 mb-4">
@@ -241,6 +293,50 @@ export default function ManageAvailability() {
                     >
                         Block These Dates
                     </button>
+                </div>
+
+                <div className="mb-8">
+                    <h3 className="text-lg font-semibold mb-4">Currently Blocked Dates</h3>
+                    {availabilities.length === 0 ? (
+                        <p className="text-gray-500">No dates are currently blocked.</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="border p-2 text-left">Start Date</th>
+                                        <th className="border p-2 text-left">End Date</th>
+                                        <th className="border p-2 text-left">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {availabilities.map((availability) => {
+                                        const startDate = new Date(availability.startDate);
+                                        const endDate = new Date(availability.endDate);
+
+                                        return (
+                                            <tr key={availability.id} className="hover:bg-gray-50">
+                                                <td className="border p-2">
+                                                    {startDate.toLocaleDateString()}
+                                                </td>
+                                                <td className="border p-2">
+                                                    {endDate.toLocaleDateString()}
+                                                </td>
+                                                <td className="border p-2">
+                                                    <button
+                                                        onClick={() => handleRemoveAvailability(availability.id)}
+                                                        className="px-2 py-1 text-xs text-red-600 hover:text-red-800 transition-colors"
+                                                    >
+                                                        Remove
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-between">
