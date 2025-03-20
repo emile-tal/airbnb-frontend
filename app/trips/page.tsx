@@ -22,13 +22,16 @@ export default function TripsPage() {
             if (status === 'authenticated') {
                 try {
                     const tripsData = await getCurrentUserTrips();
-                    setTrips(tripsData);
+                    setTrips(tripsData || []);
                     setIsLoading(false);
+                    setError(null);
                 } catch (error) {
                     console.error('Error fetching trips:', error);
                     setError('Failed to load your trips. Please try again later.');
                     setIsLoading(false);
                 }
+            } else if (status === 'unauthenticated') {
+                setIsLoading(false);
             }
         }
 
@@ -53,7 +56,7 @@ export default function TripsPage() {
     );
 
     // Format date for display
-    const formatDate = (date: Date) => {
+    const formatDate = (date: string | Date) => {
         return new Date(date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -78,7 +81,7 @@ export default function TripsPage() {
             <div className="container mx-auto px-4 py-8">
                 <h1 className="text-2xl font-bold mb-6">Your Trips</h1>
 
-                {error && (
+                {error && trips.length === 0 && (
                     <div className="mb-6 p-4 bg-red-50 text-red-500 rounded-lg">
                         {error}
                     </div>
@@ -90,7 +93,7 @@ export default function TripsPage() {
                         <ul className="mt-2 list-disc list-inside">
                             {rejectedTrips.map(trip => (
                                 <li key={trip.id}>
-                                    {trip.listing.title}: {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+                                    {trip.listing?.title}: {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
                                 </li>
                             ))}
                         </ul>
@@ -110,7 +113,7 @@ export default function TripsPage() {
                             You don't have any upcoming trips.
                             <div className="mt-4">
                                 <Link
-                                    href="/listings"
+                                    href="/"
                                     className="text-rose-500 hover:text-rose-600 font-medium"
                                 >
                                     Start exploring stays
@@ -123,22 +126,22 @@ export default function TripsPage() {
                                 <div key={trip.id} className="border rounded-lg overflow-hidden shadow-sm">
                                     <div className="relative h-48 w-full">
                                         <Image
-                                            src={trip.listing.imageSrc || '/placeholder.jpg'}
-                                            alt={trip.listing.title}
+                                            src={trip.listing?.imageSrc || '/placeholder.jpg'}
+                                            alt={trip.listing?.title || 'Listing'}
                                             fill
                                             style={{ objectFit: 'cover' }}
                                         />
                                     </div>
                                     <div className="p-4">
-                                        <h3 className="font-medium text-lg mb-1">{trip.listing.title}</h3>
+                                        <h3 className="font-medium text-lg mb-1">{trip.listing?.title}</h3>
                                         <div className="text-gray-500 mb-2 text-sm">
                                             {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
                                         </div>
                                         <div className="flex justify-between items-center">
                                             <span className="font-medium">${trip.totalPrice}</span>
                                             <span className={`px-2 py-1 rounded-full text-xs ${trip.status === 'accepted'
-                                                    ? 'bg-green-100 text-green-800'
-                                                    : 'bg-yellow-100 text-yellow-800'
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-yellow-100 text-yellow-800'
                                                 }`}>
                                                 {trip.status === 'accepted' ? 'Confirmed' : 'Pending'}
                                             </span>
@@ -162,14 +165,14 @@ export default function TripsPage() {
                                 <div key={trip.id} className="border rounded-lg overflow-hidden shadow-sm">
                                     <div className="relative h-48 w-full">
                                         <Image
-                                            src={trip.listing.imageSrc || '/placeholder.jpg'}
-                                            alt={trip.listing.title}
+                                            src={trip.listing?.imageSrc || '/placeholder.jpg'}
+                                            alt={trip.listing?.title || 'Listing'}
                                             fill
                                             style={{ objectFit: 'cover' }}
                                         />
                                     </div>
                                     <div className="p-4">
-                                        <h3 className="font-medium text-lg mb-1">{trip.listing.title}</h3>
+                                        <h3 className="font-medium text-lg mb-1">{trip.listing?.title}</h3>
                                         <div className="text-gray-500 mb-2 text-sm">
                                             {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
                                         </div>

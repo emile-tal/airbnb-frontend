@@ -19,7 +19,7 @@ const getBaseUrl = () => {
 
 // Listings (formerly Properties)
 export async function getListings(): Promise<Listing[]> {
-    const maxRetries = 2;
+    const maxRetries = 3;
     let retries = 0;
 
     const fetchListings = async (): Promise<Listing[]> => {
@@ -28,37 +28,57 @@ export async function getListings(): Promise<Listing[]> {
             const baseUrl = getBaseUrl();
             console.log(`Client API: Using base URL: ${baseUrl}`);
 
-            const response = await fetch(`${baseUrl}/api/listings`, {
-                cache: 'no-store',
-                credentials: 'include',
-                headers: {
-                    'Accept': 'application/json',
-                },
-                next: { revalidate: 0 } // Ensure we're not using cached data
-            });
+            const controller = new AbortController();
+            const timeout = setTimeout(() => {
+                controller.abort();
+            }, 20000); // 20-second timeout
 
-            if (!response.ok) {
-                console.error('Client API: Error response from /api/listings', response.status);
+            try {
+                const response = await fetch(`${baseUrl}/api/listings`, {
+                    cache: 'no-store',
+                    credentials: 'include',
+                    headers: {
+                        'Accept': 'application/json',
+                    },
+                    signal: controller.signal,
+                    next: { revalidate: 0 } // Ensure we're not using cached data
+                });
 
-                // If response has JSON body, log it for debugging
-                try {
-                    const errorBody = await response.json();
-                    console.error('Client API: Error details:', errorBody);
-                    throw new ApiError(errorBody.message || 'Failed to retrieve listings', response.status);
-                } catch (_) {
-                    console.error('Client API: Could not parse error response body');
-                    throw new ApiError('Failed to retrieve listings', response.status);
+                clearTimeout(timeout);
+
+                if (!response.ok) {
+                    console.error('Client API: Error response from /api/listings', response.status);
+
+                    // If response has JSON body, log it for debugging
+                    try {
+                        const errorBody = await response.json();
+                        console.error('Client API: Error details:', errorBody);
+                        throw new ApiError(errorBody.message || 'Failed to retrieve listings', response.status);
+                    } catch (jsonError) {
+                        console.error('Client API: Could not parse error response body');
+                        throw new ApiError('Failed to retrieve listings', response.status);
+                    }
                 }
-            }
 
-            const data = await response.json();
-            if (!data || !Array.isArray(data)) {
-                console.error('Client API: Unexpected data format received:', data);
-                throw new ApiError('Unexpected data format received from API', 500);
-            }
+                const data = await response.json();
+                if (!data || !Array.isArray(data)) {
+                    console.error('Client API: Unexpected data format received:', data);
+                    throw new ApiError('Unexpected data format received from API', 500);
+                }
 
-            console.log(`Client API: Successfully fetched ${data.length} listings`);
-            return data;
+                console.log(`Client API: Successfully fetched ${data.length} listings`);
+                return data;
+            } catch (fetchError) {
+                clearTimeout(timeout);
+
+                // Check if it's an AbortError (timeout)
+                if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                    console.error('Client API: Request timeout fetching listings');
+                    throw new ApiError('Request timed out while fetching listings', 408);
+                }
+
+                throw fetchError;
+            }
         } catch (error) {
             console.error("Client API: Error getting listings:", error);
             if (error instanceof ApiError) {
@@ -79,8 +99,8 @@ export async function getListings(): Promise<Listing[]> {
             }
             retries++;
             console.log(`Client API: Retrying fetch listings (${retries}/${maxRetries})`);
-            // Add a small delay before retrying
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Add a delay before retrying with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retries - 1), 5000)));
         }
     }
 
@@ -280,24 +300,89 @@ export async function deleteListing(id: string): Promise<void> {
 export async function createReservation(
     reservation: Omit<Reservation, 'id' | 'createdAt'>
 ): Promise<Reservation> {
-    try {
-        const response = await fetch('/api/reservations', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(reservation),
-        });
+    const maxRetries = 2;
+    let retries = 0;
 
-        if (!response.ok) {
-            throw new ApiError('Failed to create reservation', response.status);
+    const attemptCreateReservation = async (): Promise<Reservation> => {
+        try {
+            console.log('Client API: Creating reservation', reservation);
+            const baseUrl = getBaseUrl();
+
+            // Add timeout to detect hanging requests
+            const controller = new AbortController();
+            const timeout = setTimeout(() => {
+                controller.abort();
+            }, 15000); // 15-second timeout
+
+            try {
+                const response = await fetch(`${baseUrl}/api/reservations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                    },
+                    body: JSON.stringify(reservation),
+                    credentials: 'include',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeout);
+
+                if (!response.ok) {
+                    console.error('Client API: Error response from POST /api/reservations', response.status);
+
+                    // Try to get more detailed error info
+                    try {
+                        const errorResponse = await response.json();
+                        console.error('Client API: Server error details:', errorResponse);
+                        throw new ApiError(errorResponse.message || 'Failed to create reservation', response.status);
+                    } catch (jsonError) {
+                        console.error('Client API: Could not parse error response:', jsonError);
+                        throw new ApiError('Failed to create reservation', response.status);
+                    }
+                }
+
+                const data = await response.json();
+                console.log(`Client API: Successfully created reservation with id ${data.id}`);
+                return data;
+            } catch (fetchError) {
+                clearTimeout(timeout);
+
+                // Check if it's an AbortError (timeout)
+                if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+                    console.error('Client API: Request timeout creating reservation');
+                    throw new ApiError('Request timed out while creating reservation', 408);
+                }
+
+                throw fetchError;
+            }
+        } catch (error) {
+            console.error("Client API: Error creating reservation:", error);
+            if (error instanceof ApiError) {
+                throw error;
+            }
+            throw new ApiError('Failed to create reservation', 500);
         }
+    };
 
-        return response.json();
-    } catch (error) {
-        console.error("Error creating reservation:", error);
-        throw new ApiError('Failed to create reservation', 500);
+    while (retries <= maxRetries) {
+        try {
+            return await attemptCreateReservation();
+        } catch (error) {
+            if (retries === maxRetries) {
+                console.error(`Client API: Max retries (${maxRetries}) reached for creating reservation`);
+                throw new ApiError('Failed to create reservation after multiple attempts',
+                    error instanceof ApiError ? error.status : 500);
+            }
+            retries++;
+            console.log(`Client API: Retrying create reservation (${retries}/${maxRetries})`);
+            // Add a delay before retrying with exponential backoff
+            await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retries - 1), 3000)));
+        }
     }
+
+    // This should never be reached due to the throw in the while loop
+    throw new ApiError('Failed to create reservation', 500);
 }
 
 export async function getUserReservations(userId: string): Promise<Reservation[]> {

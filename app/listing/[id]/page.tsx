@@ -134,6 +134,7 @@ export default function ListingDetail() {
         }
 
         if (!listing || !checkInDate || !checkOutDate) {
+            setError('Please select check-in and check-out dates');
             return;
         }
 
@@ -148,33 +149,61 @@ export default function ListingDetail() {
 
             // If no user ID in session, try fetching it
             if (!userId && session.user?.email) {
-                const userResponse = await fetch('/api/users/me');
-                if (userResponse.ok) {
-                    const userData = await userResponse.json();
-                    userId = userData.id;
-                } else {
-                    throw new Error('Failed to get user information');
+                try {
+                    const userResponse = await fetch('/api/users/me');
+                    if (userResponse.ok) {
+                        const userData = await userResponse.json();
+                        userId = userData.id;
+                    } else {
+                        const errorData = await userResponse.json();
+                        throw new Error(errorData.message || 'Failed to get user information');
+                    }
+                } catch (userError) {
+                    console.error('Error fetching user data:', userError);
+                    setError('Failed to retrieve your user information. Please try logging in again.');
+                    setIsSubmitting(false);
+                    return;
                 }
             }
 
             if (!userId) {
-                throw new Error('User ID not available');
+                setError('User ID not available. Please try logging in again.');
+                setIsSubmitting(false);
+                return;
             }
 
-            await createReservation({
-                listingId: listing.id,
-                userId,
-                startDate: checkInDate.toDate(),
-                endDate: checkOutDate.toDate(),
-                totalPrice,
-                status: 'pending'
-            });
+            try {
+                await createReservation({
+                    listingId: listing.id,
+                    userId,
+                    startDate: checkInDate.toDate(),
+                    endDate: checkOutDate.toDate(),
+                    totalPrice,
+                    status: 'pending'
+                });
 
-            // Redirect to trips page or show success message
-            router.push('/trips');
+                // Redirect to trips page or show success message
+                router.push('/trips');
+            } catch (reservationError: any) {
+                console.error('Error creating reservation:', reservationError);
+
+                // Handle specific error messages
+                if (reservationError?.message?.includes('conflict')) {
+                    setError('This reservation conflicts with an existing booking. Please select different dates.');
+                } else if (reservationError?.status === 400) {
+                    setError(reservationError.message || 'Invalid reservation data. Please check your selections.');
+                } else if (reservationError?.status === 401) {
+                    setError('You need to be logged in to make a reservation. Please log in and try again.');
+                    setTimeout(() => router.push('/login'), 2000);
+                } else if (reservationError?.status === 408) {
+                    setError('The request timed out. Please check your connection and try again.');
+                } else {
+                    setError('Failed to create reservation. Please try again later.');
+                }
+            }
         } catch (error) {
-            console.error('Error creating reservation:', error);
-            setError('Failed to create reservation. Please try again.');
+            console.error('Unexpected error during reservation:', error);
+            setError('An unexpected error occurred. Please try again later.');
         } finally {
             setIsSubmitting(false);
         }

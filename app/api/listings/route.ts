@@ -1,4 +1,4 @@
-import { checkDatabaseConnection, prisma } from '../../../lib/prisma';
+import { checkDatabaseConnection, executeWithRetry, prisma } from '../../../lib/prisma';
 
 import { NextResponse } from 'next/server';
 import { authOptions } from '../auth/[...nextauth]/route';
@@ -25,18 +25,26 @@ export async function GET(_request: Request) {
             const isConnected = await checkDatabaseConnection();
             if (!isConnected) {
                 console.error('API Route: Database connection check failed');
-                return NextResponse.json(
-                    { error: "Database connection error", message: "Failed to connect to database" },
-                    { status: 500 }
-                );
+                // Try to reconnect the database
+                await prisma.$disconnect();
+                await prisma.$connect();
+
+                // Check again after reconnection attempt
+                const reconnected = await checkDatabaseConnection();
+                if (!reconnected) {
+                    return NextResponse.json(
+                        { error: "Database connection error", message: "Failed to connect to database" },
+                        { status: 500 }
+                    );
+                }
             }
 
-            // Simple query approach with no special options
-            const listings = await prisma.listing.findMany({
+            // Use executeWithRetry for more robust database operations
+            const listings = await executeWithRetry(() => prisma.listing.findMany({
                 orderBy: {
                     createdAt: 'desc'
                 }
-            });
+            }));
 
             console.log(`API Route: Successfully fetched ${listings.length} listings`);
 

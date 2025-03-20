@@ -1,14 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 import { Listing } from '@/app/types';
 import { getListings } from '@/app/lib/api';
 
-const ErrorDisplay = ({ error }: { error: string }) => (
+const ErrorDisplay = ({ error, onRetry }: { error: string, onRetry: () => void }) => (
     <div className="bg-red-50 p-4 rounded-lg text-red-500 text-center">
-        {error}
+        <p className="mb-2">{error}</p>
+        <button
+            onClick={onRetry}
+            className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition"
+        >
+            Try Again
+        </button>
     </div>
 );
 
@@ -28,37 +35,52 @@ export default function ListingsDisplay() {
     const [listings, setListings] = useState<Listing[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        async function fetchListings() {
-            if (isLoaded) return; // Prevent refetching
-
-            try {
-                setError(null);
-                const data = await getListings();
-                setListings(Array.isArray(data) ? data : []);
-            } catch (err) {
-                console.error('Failed to fetch listings:', err);
-                let errorMessage = 'Failed to load listings. Please try again later.';
-                if (err && typeof err === 'object' && 'message' in err) {
-                    errorMessage = `Error: ${err.message}`;
-                }
-                setError(errorMessage);
-            } finally {
-                setIsLoaded(true);
+    async function fetchListings() {
+        try {
+            setIsLoading(true);
+            setError(null);
+            const data = await getListings();
+            setListings(Array.isArray(data) ? data : []);
+            setIsLoaded(true);
+        } catch (err) {
+            console.error('Failed to fetch listings:', err);
+            let errorMessage = 'Failed to load listings. Please try again later.';
+            if (err && typeof err === 'object' && 'message' in err) {
+                errorMessage = `Error: ${err.message}`;
             }
+            setError(errorMessage);
+        } finally {
+            setIsLoading(false);
         }
-
-        fetchListings();
-    }, [isLoaded]);
-
-    if (error) {
-        return <ErrorDisplay error={error} />;
     }
 
-    if (!isLoaded) {
-        // This should not be visible since parent Suspense handles loading
-        return null;
+    useEffect(() => {
+        fetchListings();
+    }, []);
+
+    if (error) {
+        return <ErrorDisplay error={error} onRetry={fetchListings} />;
+    }
+
+    if (isLoading && !isLoaded) {
+        return (
+            <div className="w-full py-12">
+                <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="border rounded-lg overflow-hidden shadow-sm h-80">
+                            <div className="h-48 bg-gray-200 w-full"></div>
+                            <div className="p-4">
+                                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
     }
 
     if (listings.length === 0) {
