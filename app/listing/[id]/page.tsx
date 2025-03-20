@@ -2,6 +2,7 @@
 
 import { Listing, ListingAvailability } from '../../types';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { createReservation, getListing } from '../../lib/api';
 import dayjs, { Dayjs } from 'dayjs';
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -11,7 +12,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import Image from 'next/image';
 import Link from 'next/link';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { getListing } from '../../lib/api';
+import { useSession } from 'next-auth/react';
 
 // MUI theme to match the Airbnb color scheme
 const theme = createTheme({
@@ -26,6 +27,7 @@ export default function ListingDetail() {
     const router = useRouter();
     const params = useParams();
     const { id } = params;
+    const { data: session, status } = useSession();
 
     const [listing, setListing] = useState<Listing | null>(null);
     const [loading, setLoading] = useState(true);
@@ -35,6 +37,8 @@ export default function ListingDetail() {
     const [checkOutDate, setCheckOutDate] = useState<Dayjs | null>(null);
     const [error, setError] = useState<string>('');
     const [nightsCount, setNightsCount] = useState<number>(0);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [selectedGuests, setSelectedGuests] = useState(1);
 
     useEffect(() => {
         setIsMounted(true);
@@ -121,6 +125,59 @@ export default function ListingDetail() {
     const calculateTotalPrice = () => {
         if (!checkInDate || !checkOutDate || !listing) return 0;
         return listing.price * nightsCount;
+    };
+
+    const handleReservation = async () => {
+        if (!session) {
+            router.push('/login');
+            return;
+        }
+
+        if (!listing || !checkInDate || !checkOutDate) {
+            return;
+        }
+
+        setIsSubmitting(true);
+        setError('');
+
+        try {
+            const totalPrice = calculateTotalPrice() + 75 + 65; // base + cleaning fee + service fee
+
+            // Get user ID from session or fetch it if not available
+            let userId = session.user?.id;
+
+            // If no user ID in session, try fetching it
+            if (!userId && session.user?.email) {
+                const userResponse = await fetch('/api/users/me');
+                if (userResponse.ok) {
+                    const userData = await userResponse.json();
+                    userId = userData.id;
+                } else {
+                    throw new Error('Failed to get user information');
+                }
+            }
+
+            if (!userId) {
+                throw new Error('User ID not available');
+            }
+
+            await createReservation({
+                listingId: listing.id,
+                userId,
+                startDate: checkInDate.toDate(),
+                endDate: checkOutDate.toDate(),
+                totalPrice,
+                status: 'pending'
+            });
+
+            // Redirect to trips page or show success message
+            router.push('/trips');
+        } catch (error) {
+            console.error('Error creating reservation:', error);
+            setError('Failed to create reservation. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // Function to determine if a date should be disabled
@@ -306,6 +363,8 @@ export default function ListingDetail() {
                                             </label>
                                             <select
                                                 className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-[#FF385C] focus:border-[#FF385C]"
+                                                value={selectedGuests}
+                                                onChange={(e) => setSelectedGuests(parseInt(e.target.value))}
                                             >
                                                 <option value="1">1 guest</option>
                                                 <option value="2">2 guests</option>
@@ -317,10 +376,11 @@ export default function ListingDetail() {
                                     </div>
 
                                     <button
-                                        className="w-full bg-[#FF385C] hover:bg-[#E61E4D] text-white font-medium py-3 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        disabled={!checkInDate || !checkOutDate || !!error}
+                                        className="w-full bg-[#FF385C] hover:bg-[#E61E4D] hover:cursor-pointer text-white font-medium py-3 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        disabled={!checkInDate || !checkOutDate || !!error || isSubmitting}
+                                        onClick={handleReservation}
                                     >
-                                        Reserve
+                                        {isSubmitting ? 'Processing...' : 'Reserve'}
                                     </button>
 
                                     <div className="mt-4 border-t pt-4">

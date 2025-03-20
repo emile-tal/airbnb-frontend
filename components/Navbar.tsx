@@ -2,40 +2,29 @@
 
 import { signOut, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function Navbar() {
     const { data: session } = useSession();
-    const _router = useRouter();
-    const [hasListings, setHasListings] = useState(false);
-    const [isCheckingListings, setIsCheckingListings] = useState(false);
+    const router = useRouter();
+    const pathname = usePathname();
+    const [isHosting, setIsHosting] = useState(false);
 
     useEffect(() => {
-        if (session) {
-            setIsCheckingListings(true);
-            // Check if user has listings
-            fetch("/api/listings/user/check")
-                .then((res) => {
-                    if (!res.ok) {
-                        throw new Error("Failed to check listings");
-                    }
-                    return res.json();
-                })
-                .then((data) => {
-                    setHasListings(data.hasListings);
-                    setIsCheckingListings(false);
-                })
-                .catch((error) => {
-                    console.error("Error checking user listings:", error);
-                    setIsCheckingListings(false);
-                    // Default to showing the dashboard link if we can't check
-                    // This way users don't lose access to their dashboard if the check fails
-                    setHasListings(true);
-                });
+        // Check if the current path is in the hosting section
+        setIsHosting(pathname?.startsWith('/dashboard') || false);
+    }, [pathname]);
+
+    const handleSwitchMode = () => {
+        if (isHosting) {
+            router.push('/'); // Go to homepage (guest mode)
+        } else {
+            router.push('/dashboard'); // Go to dashboard (host mode)
         }
-    }, [session]);
+        setIsHosting(!isHosting);
+    };
 
     return (
         <nav className="bg-white shadow-sm">
@@ -44,43 +33,42 @@ export default function Navbar() {
                     <div className="flex">
                         <Link
                             href="/"
-                            className="flex items-center px-2 py-2 text-gray-900 hover:text-gray-500"
+                            className="flex items-center px-2 py-2 text-gray-900 hover:text-gray-500 hover:cursor-pointer"
                         >
                             Home
-                        </Link>
-                        <Link
-                            href="/listings"
-                            className="flex items-center px-2 py-2 text-gray-900 hover:text-gray-500"
-                        >
-                            Listings
                         </Link>
                     </div>
                     <div className="flex items-center">
                         {session ? (
                             <div className="flex items-center space-x-4">
-                                <Link
-                                    href="/trips"
-                                    className="px-4 py-2 text-sm font-medium text-gray-900 hover:text-gray-500 transition-colors"
-                                >
-                                    Trips
-                                </Link>
-                                {(hasListings || isCheckingListings) && (
+                                {!isHosting && (
                                     <Link
-                                        href="/dashboard"
-                                        className="px-4 py-2 text-sm font-medium text-gray-900 hover:text-gray-500 transition-colors"
+                                        href="/trips"
+                                        className="px-4 py-2 text-sm font-medium text-gray-900 hover:text-gray-500 transition-colors hover:cursor-pointer"
                                     >
-                                        Dashboard
+                                        My Trips
                                     </Link>
                                 )}
-                                <Link
-                                    href="/add-listing"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600 transition-colors"
+
+                                <button
+                                    onClick={handleSwitchMode}
+                                    className="px-4 py-2 text-sm font-medium text-gray-900 hover:text-gray-500 border border-gray-300 rounded-full transition-colors hover:cursor-pointer"
                                 >
-                                    Create Listing
-                                </Link>
+                                    {isHosting ? "Switch to traveling" : "Switch to hosting"}
+                                </button>
+
+                                {isHosting && (
+                                    <Link
+                                        href="/add-listing"
+                                        className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600 transition-colors hover:cursor-pointer"
+                                    >
+                                        Add Listing
+                                    </Link>
+                                )}
+
                                 <button
                                     onClick={() => signOut()}
-                                    className="px-4 py-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors"
+                                    className="px-4 py-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors hover:cursor-pointer"
                                 >
                                     Sign out
                                 </button>
@@ -89,13 +77,13 @@ export default function Navbar() {
                             <div className="flex items-center space-x-4">
                                 <Link
                                     href="/login"
-                                    className="px-4 py-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors"
+                                    className="px-4 py-2 text-sm font-medium text-rose-500 hover:text-rose-600 transition-colors hover:cursor-pointer"
                                 >
                                     Sign in
                                 </Link>
                                 <Link
                                     href="/register"
-                                    className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600 transition-colors"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-rose-500 rounded-md hover:bg-rose-600 transition-colors hover:cursor-pointer"
                                 >
                                     Sign up
                                 </Link>
