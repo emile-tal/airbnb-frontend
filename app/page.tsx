@@ -3,6 +3,7 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 // Lazy-loaded components
 const ListingsDisplay = lazy(() => import('@/app/components/ListingsDisplay'));
@@ -14,6 +15,16 @@ const LoadingSkeleton = () => (
 
 export default function Home() {
   const [isMounted, setIsMounted] = useState(false);
+  const searchParams = useSearchParams();
+
+  // Get search parameters to check if filters are applied
+  const location = searchParams.get('location');
+  const startDate = searchParams.get('startDate');
+  const endDate = searchParams.get('endDate');
+  const guests = searchParams.get('guests');
+
+  // Check if any filters are applied
+  const isFiltered = !!(location || (startDate && endDate) || guests);
 
   useEffect(() => {
     setIsMounted(true);
@@ -25,15 +36,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen p-4 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold text-center">Vibe Rentals</h1>
-        <p className="text-center text-gray-600 mt-2">Find your perfect getaway</p>
-      </header>
-
       <main>
         <section className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Featured Listings</h2>
-
           <Suspense fallback={<LoadingSkeleton />}>
             <ListingsDisplay />
           </Suspense>

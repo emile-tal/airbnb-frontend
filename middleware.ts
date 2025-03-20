@@ -8,7 +8,12 @@ export default withAuth({
     callbacks: {
         authorized: ({ req, token }) => {
             // Allow public access to the landing page and API routes
-            if (req.nextUrl.pathname === "/" || req.nextUrl.pathname.startsWith("/api/")) {
+            if (
+                req.nextUrl.pathname === "/" ||
+                req.nextUrl.pathname.startsWith("/api/") ||
+                req.nextUrl.pathname.startsWith("/login") ||
+                req.nextUrl.pathname.startsWith("/register")
+            ) {
                 return true;
             }
             // Require authentication for protected routes

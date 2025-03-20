@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import Link from "next/link";
+import SearchBar from "./SearchBar";
 
 export default function Navbar() {
     const { data: session } = useSession();
@@ -26,18 +27,32 @@ export default function Navbar() {
         setIsHosting(!isHosting);
     };
 
+    const handleHomeClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+        // If we're already on the home page, prevent default navigation and just push to "/"
+        // This ensures all query parameters are cleared
+        if (pathname === '/') {
+            e.preventDefault();
+            router.push('/');
+        }
+    };
+
     return (
-        <nav className="bg-white shadow-sm">
+        <nav className="bg-white shadow-sm sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
-                    <div className="flex">
+                {/* Top level - Logo and Navigation */}
+                <div className="flex justify-between items-center h-16">
+                    {/* Left side: Logo */}
+                    <div className="flex-shrink-0">
                         <Link
                             href="/"
-                            className="flex items-center px-2 py-2 text-gray-900 hover:text-gray-500 hover:cursor-pointer"
+                            className="flex items-center text-2xl font-bold text-[#FF385C] hover:cursor-pointer"
+                            onClick={handleHomeClick}
                         >
-                            Home
+                            VibeBNB
                         </Link>
                     </div>
+
+                    {/* Right side: Navigation */}
                     <div className="flex items-center">
                         {session ? (
                             <div className="flex items-center space-x-4">
@@ -89,6 +104,13 @@ export default function Navbar() {
                                 </Link>
                             </div>
                         )}
+                    </div>
+                </div>
+
+                {/* Bottom level - Centered Search Bar */}
+                <div className="flex justify-center py-4">
+                    <div className="w-full max-w-3xl">
+                        <SearchBar />
                     </div>
                 </div>
             </div>

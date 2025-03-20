@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Listing } from '@/app/types';
 import { getListings } from '@/app/lib/api';
+import { useSearchParams } from 'next/navigation';
 
 const ErrorDisplay = ({ error, onRetry }: { error: string, onRetry: () => void }) => (
     <div className="bg-red-50 p-4 rounded-lg text-red-500 text-center">
@@ -32,10 +33,18 @@ const EmptyListingsDisplay = () => (
 );
 
 export default function ListingsDisplay() {
+    const searchParams = useSearchParams();
     const [listings, setListings] = useState<Listing[]>([]);
+    const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
     const [error, setError] = useState<string | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Get search parameters
+    const location = searchParams.get('location');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const guests = searchParams.get('guests');
 
     async function fetchListings() {
         try {
@@ -60,6 +69,39 @@ export default function ListingsDisplay() {
         fetchListings();
     }, []);
 
+    // Filter listings based on search parameters
+    useEffect(() => {
+        if (listings.length === 0) return;
+
+        let filtered = [...listings];
+
+        // Filter by location (case insensitive)
+        if (location) {
+            filtered = filtered.filter(listing =>
+                listing.locationValue.toLowerCase().includes(location.toLowerCase()) ||
+                listing.title.toLowerCase().includes(location.toLowerCase())
+            );
+        }
+
+        // Filter by number of guests
+        if (guests) {
+            const guestCount = parseInt(guests, 10);
+            if (!isNaN(guestCount)) {
+                filtered = filtered.filter(listing => listing.guestCount >= guestCount);
+            }
+        }
+
+        // Note: Date filtering would typically be done server-side with reservation data
+        // This is a simplified client-side implementation 
+        if (startDate && endDate) {
+            // For this implementation, we're just keeping all listings
+            // In a real app, we would check availability for each listing
+            // against the reservation dates
+        }
+
+        setFilteredListings(filtered);
+    }, [listings, location, startDate, endDate, guests]);
+
     if (error) {
         return <ErrorDisplay error={error} onRetry={fetchListings} />;
     }
@@ -83,13 +125,15 @@ export default function ListingsDisplay() {
         );
     }
 
-    if (listings.length === 0) {
+    const displayListings = filteredListings.length > 0 ? filteredListings : listings;
+
+    if (displayListings.length === 0) {
         return <EmptyListingsDisplay />;
     }
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {listings.map((listing) => (
+            {displayListings.map((listing) => (
                 <Link href={`/listing/${listing.id}`} key={listing.id}>
                     <div className="border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                         <div className="relative h-48 w-full">
@@ -122,6 +166,9 @@ export default function ListingsDisplay() {
                                     </span>
                                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                                         {listing.bathroomCount} Bathrooms
+                                    </span>
+                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded">
+                                        {listing.guestCount} Guests
                                     </span>
                                     <span className="text-xs bg-gray-100 px-2 py-1 rounded">
                                         {listing.category}
