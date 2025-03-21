@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -45,7 +45,8 @@ const NoSearchResultsDisplay = ({ searchTerms, onClearSearch }: { searchTerms: s
     </div>
 );
 
-export default function ListingsDisplay() {
+// Inner component that uses useSearchParams
+function ListingsDisplayContent() {
     const searchParams = useSearchParams();
     const [listings, setListings] = useState<Listing[]>([]);
     const [filteredListings, setFilteredListings] = useState<Listing[]>([]);
@@ -225,5 +226,29 @@ export default function ListingsDisplay() {
                 </Link>
             ))}
         </div>
+    );
+}
+
+// Main component with Suspense boundary
+export default function ListingsDisplay() {
+    return (
+        <Suspense fallback={
+            <div className="w-full py-12">
+                <div className="animate-pulse grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[1, 2, 3, 4, 5, 6].map((i) => (
+                        <div key={i} className="border rounded-lg overflow-hidden shadow-sm h-80">
+                            <div className="h-48 bg-gray-200 w-full"></div>
+                            <div className="p-4">
+                                <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+                                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        }>
+            <ListingsDisplayContent />
+        </Suspense>
     );
 } 

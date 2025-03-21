@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 
-// Create a client component that doesn't use useSearchParams
+// Create a client component that never uses useSearchParams
 function NotFoundContent() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
