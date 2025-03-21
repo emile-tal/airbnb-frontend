@@ -6,10 +6,7 @@ import 'react-date-range/dist/theme/default.css';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import { DateRange } from 'react-date-range';
-import LocationOnIcon from '@mui/icons-material/LocationOn';
-import PeopleIcon from '@mui/icons-material/People';
 import SearchIcon from '@mui/icons-material/Search';
 import { format } from 'date-fns';
 
@@ -139,20 +136,19 @@ const SearchBar: React.FC<SearchBarProps> = () => {
         <div className={`relative flex items-center rounded-full shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:shadow-[0_0_20px_rgba(0,0,0,0.15)] transition-shadow ${anyInputActive ? 'bg-gray-100' : 'bg-white'}`}>
             {/* Location */}
             <div className="relative flex-1 min-w-0">
-                <div className={`flex items-center p-3 ${locationFocused ? 'bg-white rounded-full' : ''}`}
+                <div className={`flex items-center p-3 pl-5 ${locationFocused ? 'bg-white rounded-full' : ''} hover:cursor-pointer`}
                     onClick={() => {
                         setLocationFocused(true);
                         setDatePickerOpen(false);
                         setGuestPickerOpen(false);
                     }}>
-                    <LocationOnIcon className="mr-2 text-gray-500" fontSize="small" />
                     <div className="flex flex-col">
-                        <label className="text-xs font-medium">Location</label>
+                        <label className="text-xs font-medium">Where</label>
                         <input
                             type="text"
                             value={location}
                             onChange={handleLocationChange}
-                            placeholder="Where are you going?"
+                            placeholder="Search destinations"
                             className="w-full border-none p-0 focus:outline-none text-sm bg-transparent"
                             onFocus={() => setLocationFocused(true)}
                             onBlur={() => setTimeout(() => setLocationFocused(false), 100)}
@@ -166,15 +162,14 @@ const SearchBar: React.FC<SearchBarProps> = () => {
 
             {/* Date Range */}
             <div className="relative flex-1 min-w-0">
-                <div className={`flex items-center p-3 ${datePickerOpen ? 'bg-white rounded-full' : ''}`}
+                <div className={`flex items-center p-3 pl-5 ${datePickerOpen ? 'bg-white rounded-full' : ''} hover:cursor-pointer`}
                     onClick={() => {
                         setDatePickerOpen(!datePickerOpen);
                         setLocationFocused(false);
                         setGuestPickerOpen(false);
                     }}>
-                    <CalendarMonthIcon className="mr-2 text-gray-500" fontSize="small" />
                     <div className="flex flex-col">
-                        <label className="text-xs font-medium">Dates</label>
+                        <label className="text-xs font-medium">When</label>
                         <span className="text-sm">{formatDateDisplay()}</span>
                     </div>
                 </div>
@@ -198,15 +193,14 @@ const SearchBar: React.FC<SearchBarProps> = () => {
 
             {/* Guest Count */}
             <div className="relative flex-1 min-w-0">
-                <div className={`flex items-center p-3 ${guestPickerOpen ? 'bg-white rounded-full' : ''}`}
+                <div className={`flex items-center p-3 pl-5 ${guestPickerOpen ? 'bg-white rounded-full' : ''} hover:cursor-pointer`}
                     onClick={() => {
                         setGuestPickerOpen(!guestPickerOpen);
                         setLocationFocused(false);
                         setDatePickerOpen(false);
                     }}>
-                    <PeopleIcon className="mr-2 text-gray-500" fontSize="small" />
                     <div className="flex flex-col">
-                        <label className="text-xs font-medium">Guests</label>
+                        <label className="text-xs font-medium">Who</label>
                         <span className="text-sm">{guestCount} {guestCount === 1 ? 'guest' : 'guests'}</span>
                     </div>
                 </div>

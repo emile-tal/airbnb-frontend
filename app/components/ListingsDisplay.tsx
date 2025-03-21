@@ -32,6 +32,19 @@ const EmptyListingsDisplay = () => (
     </div>
 );
 
+const NoSearchResultsDisplay = ({ searchTerms, onClearSearch }: { searchTerms: string, onClearSearch: () => void }) => (
+    <div className="text-center py-10 bg-gray-50 rounded-lg">
+        <h3 className="text-lg font-semibold mb-2">No Listings Found</h3>
+        <p className="mb-4">No results match your search criteria: <span className="font-medium">{searchTerms}</span></p>
+        <button
+            onClick={onClearSearch}
+            className="inline-block bg-[#FF385C] hover:bg-[#E61E4D] text-white px-6 py-2 rounded-full font-medium"
+        >
+            Clear Search
+        </button>
+    </div>
+);
+
 export default function ListingsDisplay() {
     const searchParams = useSearchParams();
     const [listings, setListings] = useState<Listing[]>([]);
@@ -39,12 +52,30 @@ export default function ListingsDisplay() {
     const [error, setError] = useState<string | null>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSearched, setIsSearched] = useState(false);
 
     // Get search parameters
     const location = searchParams.get('location');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const guests = searchParams.get('guests');
+
+    // Determine if a search has been performed
+    const hasSearchParams = !!(location || startDate || endDate || guests);
+
+    // Format search terms for display
+    const formatSearchTerms = () => {
+        const terms = [];
+        if (location) terms.push(`Location: ${location}`);
+        if (startDate && endDate) terms.push(`Dates: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`);
+        if (guests) terms.push(`${guests} guest${parseInt(guests, 10) !== 1 ? 's' : ''}`);
+        return terms.join(', ');
+    };
+
+    // Clear search function
+    const handleClearSearch = () => {
+        window.location.href = '/';
+    };
 
     async function fetchListings() {
         try {
@@ -74,9 +105,11 @@ export default function ListingsDisplay() {
         if (listings.length === 0) return;
 
         let filtered = [...listings];
+        let searchPerformed = false;
 
         // Filter by location (case insensitive)
         if (location) {
+            searchPerformed = true;
             filtered = filtered.filter(listing =>
                 listing.locationValue.toLowerCase().includes(location.toLowerCase()) ||
                 listing.title.toLowerCase().includes(location.toLowerCase())
@@ -85,6 +118,7 @@ export default function ListingsDisplay() {
 
         // Filter by number of guests
         if (guests) {
+            searchPerformed = true;
             const guestCount = parseInt(guests, 10);
             if (!isNaN(guestCount)) {
                 filtered = filtered.filter(listing => listing.guestCount >= guestCount);
@@ -94,11 +128,13 @@ export default function ListingsDisplay() {
         // Note: Date filtering would typically be done server-side with reservation data
         // This is a simplified client-side implementation 
         if (startDate && endDate) {
+            searchPerformed = true;
             // For this implementation, we're just keeping all listings
             // In a real app, we would check availability for each listing
             // against the reservation dates
         }
 
+        setIsSearched(searchPerformed);
         setFilteredListings(filtered);
     }, [listings, location, startDate, endDate, guests]);
 
@@ -125,11 +161,20 @@ export default function ListingsDisplay() {
         );
     }
 
-    const displayListings = filteredListings.length > 0 ? filteredListings : listings;
+    // Show no search results message when a search is performed but no matches
+    if (hasSearchParams && filteredListings.length === 0 && listings.length > 0) {
+        return <NoSearchResultsDisplay
+            searchTerms={formatSearchTerms()}
+            onClearSearch={handleClearSearch}
+        />;
+    }
 
-    if (displayListings.length === 0) {
+    // Show empty listings when no listings exist at all
+    if (listings.length === 0) {
         return <EmptyListingsDisplay />;
     }
+
+    const displayListings = filteredListings.length > 0 && hasSearchParams ? filteredListings : listings;
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
