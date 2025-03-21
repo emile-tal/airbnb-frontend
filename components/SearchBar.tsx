@@ -3,7 +3,7 @@
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { DateRange } from 'react-date-range';
@@ -14,7 +14,8 @@ interface SearchBarProps {
     // Add any props you need here
 }
 
-const SearchBar: React.FC<SearchBarProps> = () => {
+// Inner component that uses useSearchParams
+function SearchBarContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -238,6 +239,17 @@ const SearchBar: React.FC<SearchBarProps> = () => {
                 <SearchIcon />
             </button>
         </div>
+    );
+}
+
+// Main exported component with Suspense boundary
+const SearchBar: React.FC<SearchBarProps> = () => {
+    return (
+        <Suspense fallback={
+            <div className="h-14 bg-gray-100 rounded-full animate-pulse"></div>
+        }>
+            <SearchBarContent />
+        </Suspense>
     );
 };
 

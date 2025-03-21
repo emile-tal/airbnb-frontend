@@ -13,6 +13,8 @@ export default function Navbar() {
     const pathname = usePathname();
     const [isHosting, setIsHosting] = useState(false);
 
+    const shouldShowSearchBar = !pathname?.includes('/not-found') && pathname !== '/404';
+
     useEffect(() => {
         // Check if the current path is in the hosting section
         setIsHosting(pathname?.startsWith('/dashboard') || false);
@@ -108,11 +110,13 @@ export default function Navbar() {
                 </div>
 
                 {/* Bottom level - Centered Search Bar */}
-                <div className="flex justify-center py-4">
-                    <div className="w-full max-w-3xl">
-                        <SearchBar />
+                {shouldShowSearchBar && (
+                    <div className="flex justify-center py-4">
+                        <div className="w-full max-w-3xl">
+                            <SearchBar />
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </nav>
     );
