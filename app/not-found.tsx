@@ -1,10 +1,7 @@
-'use client';
-
-import { Suspense } from 'react';
 import Link from 'next/link';
 
-// Create a client component that doesn't use useSearchParams
-function NotFoundContent() {
+// Server component that doesn't use useSearchParams
+export default function NotFound() {
     return (
         <div className="min-h-screen flex flex-col items-center justify-center p-4 text-center">
             <h1 className="text-6xl font-bold text-gray-800 mb-4">404</h1>
@@ -20,13 +17,5 @@ function NotFoundContent() {
                 Return Home
             </Link>
         </div>
-    );
-}
-
-export default function NotFound() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <NotFoundContent />
-        </Suspense>
     );
 } 

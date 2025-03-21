@@ -1,9 +1,7 @@
 'use client';
 
 import { Suspense, lazy, useEffect, useState } from 'react';
-
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
 
 // Lazy-loaded components
 const ListingsDisplay = lazy(() => import('@/app/components/ListingsDisplay'));
@@ -13,18 +11,9 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-export default function Home() {
+// Client component to handle search params
+function HomeContent() {
   const [isMounted, setIsMounted] = useState(false);
-  const searchParams = useSearchParams();
-
-  // Get search parameters to check if filters are applied
-  const location = searchParams.get('location');
-  const startDate = searchParams.get('startDate');
-  const endDate = searchParams.get('endDate');
-  const guests = searchParams.get('guests');
-
-  // Check if any filters are applied
-  const isFiltered = !!(location || (startDate && endDate) || guests);
 
   useEffect(() => {
     setIsMounted(true);
@@ -57,5 +46,14 @@ export default function Home() {
         </section>
       </main>
     </div>
+  );
+}
+
+// Main component with Suspense
+export default function Home() {
+  return (
+    <Suspense fallback={<LoadingSkeleton />}>
+      <HomeContent />
+    </Suspense>
   );
 }
