@@ -110,7 +110,7 @@ export default function Navbar() {
                 </div>
 
                 {/* Bottom level - Centered Search Bar */}
-                {shouldShowSearchBar && (
+                {shouldShowSearchBar && !isHosting && (
                     <div className="flex justify-center py-4">
                         <div className="w-full max-w-3xl">
                             <SearchBar />
