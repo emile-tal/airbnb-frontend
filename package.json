@@ -9,6 +9,8 @@
     "lint": "next lint",
     "prisma:seed": "ts-node prisma/seed.ts",
     "db:reset": "ts-node prisma/scripts/reset-db.ts",
+    "db:setup-rls": "node prisma/scripts/update-rls.js",
+    "db:setup-rls-direct": "npx dotenv -- node prisma/scripts/apply-rls-direct.js",
     "postinstall": "prisma generate"
   },
   "prisma": {
@@ -42,6 +44,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.4.7",
+    "dotenv-cli": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "15.2.2",
     "tailwindcss": "^4",
