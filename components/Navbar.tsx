@@ -13,7 +13,10 @@ export default function Navbar() {
     const pathname = usePathname();
     const [isHosting, setIsHosting] = useState(false);
 
-    const shouldShowSearchBar = !pathname?.includes('/not-found') && pathname !== '/404';
+    const shouldShowSearchBar = !pathname?.includes('/not-found') &&
+        pathname !== '/404' &&
+        pathname !== '/login' &&
+        pathname !== '/register';
 
     useEffect(() => {
         // Check if the current path is in the hosting section
