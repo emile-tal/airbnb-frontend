@@ -14,7 +14,7 @@ const prismaClientSingleton = () => {
         log: ['query', 'error', 'warn'],
         datasources: {
             db: {
-                url: process.env.POSTGRES_PRISMA_URL,
+                url: process.env.POSTGRES_URL_NON_POOLING,
             },
         },
         errorFormat: 'pretty',
@@ -25,6 +25,16 @@ const prismaClientSingleton = () => {
         try {
             return await next(params);
         } catch (error: unknown) {
+            // Log detailed error information
+            console.error('Database operation error:', {
+                error: error instanceof Error ? {
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                } : error,
+                params
+            });
+
             // Detect the specific prepared statement error
             if (error instanceof Error &&
                 (error.message?.includes('prepared statement') ||
@@ -118,13 +128,13 @@ export async function reconnectDatabase() {
 export async function checkDatabaseConnection() {
     try {
         console.log('Checking database connection...');
+        console.log('Database URL:', process.env.POSTGRES_PRISMA_URL?.split('@')[1]?.split('/')[0] || 'URL not found');
+
         await prisma.$connect();
 
         // Test the connection with a simple query
-        await prisma.user.findFirst({
-            where: { id: 'connection-test' },
-            select: { id: true }
-        });
+        const result = await prisma.$queryRaw`SELECT 1 as connected;`;
+        console.log('Database connection test result:', result);
 
         console.log('Database connection successful');
         return true;

@@ -1,8 +1,7 @@
-import { checkDatabaseConnection, executeWithRetry } from '../../../lib/prisma';
+import { checkDatabaseConnection, executeWithRetry, prisma } from '../../../lib/prisma';
 
 import { NextResponse } from 'next/server';
 import { authOptions } from '../auth/[...nextauth]/route';
-import { createPrismaFromSession } from '../../../lib/secure-prisma';
 import { getServerSession } from 'next-auth';
 
 // Simple check to demonstrate the API is reachable
@@ -10,14 +9,8 @@ export async function GET(_request: Request) {
     try {
         console.log('API Route: GET /api/listings - Starting request');
 
-        // Get the user session for RLS
-        const session = await getServerSession(authOptions);
-
-        // Create a secure Prisma client with the user's context
-        const securePrisma = createPrismaFromSession(session);
-
         // Ensure Prisma is properly initialized
-        if (!securePrisma) {
+        if (!prisma) {
             console.error('API Route: Prisma client is not initialized');
             return NextResponse.json(
                 { error: "Database connection error", message: "Database client is not initialized" },
@@ -33,8 +26,8 @@ export async function GET(_request: Request) {
             if (!isConnected) {
                 console.error('API Route: Database connection check failed');
                 // Try to reconnect the database
-                await securePrisma.$disconnect();
-                await securePrisma.$connect();
+                await prisma.$disconnect();
+                await prisma.$connect();
 
                 // Check again after reconnection attempt
                 const reconnected = await checkDatabaseConnection();
@@ -47,8 +40,7 @@ export async function GET(_request: Request) {
             }
 
             // Use executeWithRetry for more robust database operations
-            // RLS will be automatically applied based on the user context
-            const listings = await executeWithRetry(() => securePrisma.listing.findMany({
+            const listings = await executeWithRetry(() => prisma.listing.findMany({
                 orderBy: {
                     createdAt: 'desc'
                 }
@@ -101,12 +93,9 @@ export async function POST(request: Request) {
             );
         }
 
-        // Create a secure Prisma client with the user's context
-        const securePrisma = createPrismaFromSession(session);
-
         // Connect to database first
         try {
-            await securePrisma.$connect();
+            await prisma.$connect();
         } catch (connectError) {
             console.error('API Route: Failed to connect to database:', connectError);
             return NextResponse.json(
@@ -143,9 +132,8 @@ export async function POST(request: Request) {
         }
 
         // Create the listing with detailed error handling
-        // RLS will ensure only authorized operations are allowed
         try {
-            const listing = await securePrisma.listing.create({
+            const listing = await prisma.listing.create({
                 data: {
                     ...body,
                     userId: session.user.id,
@@ -160,15 +148,6 @@ export async function POST(request: Request) {
             // Check for specific Prisma errors
             if (typeof dbError === 'object' && dbError !== null && 'code' in dbError) {
                 console.error("API Route: Prisma error code:", (dbError as { code: string }).code);
-
-                // Handle permission errors from RLS
-                if ((dbError as any).code === 'P2025' ||
-                    ((dbError instanceof Error) && dbError.message.includes('permission denied'))) {
-                    return NextResponse.json(
-                        { error: "Permission denied", message: "You don't have permission to perform this action" },
-                        { status: 403 }
-                    );
-                }
             }
 
             return NextResponse.json(
@@ -178,6 +157,12 @@ export async function POST(request: Request) {
         }
     } catch (error) {
         console.error("API Route: Error creating listing:", error);
+
+        if (error instanceof Error) {
+            console.error("API Route: Error message:", error.message);
+            console.error("API Route: Error stack:", error.stack);
+        }
+
         return NextResponse.json(
             { error: "Failed to create listing", message: error instanceof Error ? error.message : String(error) },
             { status: 500 }
